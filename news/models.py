@@ -22,15 +22,26 @@ class Category(models.Model):
     def __str__(self):
         return self.name
 
+    class Meta:
+        db_table = 'categories'
+        verbose_name = 'Категория'
+        verbose_name_plural = 'Категории'
+        ordering = ['name']
+
 
 class Tag(models.Model):
     name = models.CharField(max_length=50, unique=True)
 
     def __str__(self):
         return self.name
+    db_table = 'tags'
+    verbose_name = 'Тег'
+    verbose_name_plural = 'Теги'
 
 
 class Article(models.Model):
+
+
     title = models.CharField(max_length=255)
     content = models.TextField()
     publication_date = models.DateTimeField(auto_now_add=True)
@@ -57,4 +68,10 @@ class Article(models.Model):
 
     def __str__(self):
         return self.title
+
+    class Meta:
+        db_table = 'articles'
+        verbose_name = 'Статья'
+        verbose_name_plural = 'Статьи'
+        ordering = ['-publication_date']
 
