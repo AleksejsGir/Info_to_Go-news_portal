@@ -1,31 +1,31 @@
 from django.contrib import admin
-from django.template.defaultfilters import title
 from django.utils.html import format_html
 from django.contrib.admin import SimpleListFilter
-from parso.python.tree import Class
 
 from .models import Article, Category, Tag
 
 
-admin.site.site_header = "Администрирование портала Info to Go"
+admin.site.site_header = "Админка Info to Go"
 admin.site.site_title = "Админка"
-admin.site.index_title = "Привет, администратор!"
+admin.site.index_title = "Привет админ! Не сломай ничего."
 
-class ArticleSpider(SimpleListFilter):
-    title = 'аисты'
-    parameter_name = 'is_active'
+
+class ArticleSpiderFilter(SimpleListFilter):
+    title = 'Внутри пауки'
+    parameter_name = 'has_spiders'
 
     def lookups(self, request, model_admin):
         return (
-            ('active', 'да'),
-            ('inactive', 'Неактивные'),
+            ('yes', 'Есть'),
+            ('no', 'Нет')
         )
-    def queryset(self, request, queryset):
-        if self.value() == 'active':
-            return queryset.filter(is_active=True)
-        if self.value() == 'inactive':
-            return queryset.filter(is_active=False)
 
+    def queryset(self, request, queryset):
+        if self.value() == 'yes':
+            return queryset.filter(content__contains='пауки')
+        if self.value() == 'no':
+            return queryset.exclude(content__contains='пауки')
+        return queryset
 
 
 class TagInline(admin.TabularInline):
@@ -33,22 +33,23 @@ class TagInline(admin.TabularInline):
     extra = 1
 
 
+@admin.register(Article)
 class ArticleAdmin(admin.ModelAdmin):
     # list_display отображает поля в таблице
-    list_display = ('pk', 'title', 'category', 'publication_date', 'views', 'colored_status')
+    list_display = ('pk', 'title', 'category', 'publication_date', 'views', 'status', 'is_active', 'has_spiders')
+    # list_display_links позволяет указать в качестве ссылок на объект другие поля
+    list_display_links = ('pk', 'title')
     # list_filter позволяет фильтровать по полям
-    list_filter = ('category',)
+    list_filter = ('category', 'is_active', 'status', ArticleSpiderFilter)
+    # сортировка, возможна по нескольким полям, по возрастанию или по убыванию
+    ordering = ('category', '-is_active')
     # search_fields позволяет искать по полям
     search_fields = ('title', 'content')
     # actions позволяет выполнять действия над выбранными записями
-    actions = ('make_inactive', 'make_active')
+    actions = ('make_inactive', 'make_active', 'set_checked', 'set_unchecked')
+    list_per_page = 20
     # fields позволяет выбирать поля для редактирования (не fieldsets)
     # fields = ('title', 'category', 'content', 'tags', 'is_active')
-
-
-    list_per_page = 15 # количество записей на странице
-    list_display_links = ('title',) # поля, которые являются ссылками
-    ordering = ('-views',) # сортировка по умолчанию
 
     # fieldsets позволяет выбирать группы полей (не работает с fields)
     fieldsets = (
@@ -87,4 +88,3 @@ class ArticleAdmin(admin.ModelAdmin):
 
 admin.site.register(Category)
 admin.site.register(Tag)
-
