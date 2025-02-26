@@ -47,6 +47,7 @@ class ArticleAdmin(admin.ModelAdmin):
     search_fields = ('title', 'content')
     # actions позволяет выполнять действия над выбранными записями
     actions = ('make_inactive', 'make_active', 'set_checked', 'set_unchecked')
+    actions_on_bottom = ('make_inactive', 'make_active', 'set_checked', 'set_unchecked')
     list_per_page = 20
     # fields позволяет выбирать поля для редактирования (не fieldsets)
     # fields = ('title', 'category', 'content', 'tags', 'is_active')
@@ -61,13 +62,13 @@ class ArticleAdmin(admin.ModelAdmin):
     inlines = [TagInline]
 
     def get_queryset(self, request):
-        return Article.all_objects.get_queryset()
+        return Article.all_objects.get_queryset() # Возвращает все объекты, включая неактивные
 
-    @admin.display(description='Пауки внутри')
+    @admin.display(description='Пауки внутри') # Отображение в админке
     def has_spiders(self, article):
         return 'Да' if 'пауки' in article.content else 'Нет'
 
-    @admin.action(description='Сделать неактивными выбранные статьи')
+    @admin.action(description='Сделать неактивными выбранные статьи') # Описание действия
     def make_inactive(modeladmin, request, queryset):
         queryset.update(is_active=False)
 
