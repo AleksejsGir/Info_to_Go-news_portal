@@ -1,3 +1,114 @@
 h1 {
-    background-color: green;
+    background-color: #a6eae4;
+}
+
+body {
+    background-color: #f8f9fa;
+    color: #343a40;
+}
+.navbar {
+    background-color: #343a40;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+.navbar-nav .nav-link {
+    color: #ffffff;
+    transition: color 0.2s;
+}
+.navbar-nav .nav-link:hover {
+    color: #ffc107;
+}
+.card {
+    margin-bottom: 20px;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+    transition: transform 0.2s;
+}
+.card:hover {
+    transform: translateY(-3px);
+}
+.footer {
+    background-color: #343a40;
+    color: #ffffff;
+    text-align: center;
+    padding: 10px 0;
+    box-shadow: 0 -2px 4px rgba(0,0,0,0.1);
+}
+/* Стили для бокового меню */
+.sidebar {
+    background-color: #f0f0f0;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+    margin-top: 50px; /* Отступ сверху для смещения блока вниз */
+}
+.sidebar h5 {
+    color: #343a40;
+    border-bottom: 1px solid #dee2e6;
+    padding-bottom: 12px;
+    margin-bottom: 18px;
+    font-weight: 600;
+}
+.sidebar ul {
+    list-style-type: none;
+    padding-left: 0;
+}
+.sidebar ul li {
+    margin-bottom: 10px;
+    padding: 5px 0;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+.sidebar ul li:hover {
+    background-color: #e9ecef;
+}
+.sidebar ul li a {
+    display: block;
+    color: #495057;
+    transition: color 0.2s;
+}
+.sidebar ul li a:hover {
+    color: #007bff;
+}
+.category-count {
+    float: right;
+    background-color: #6c757d;
+    color: white;
+    border-radius: 10px;
+    padding: 2px 8px;
+    font-size: 0.8rem;
+    transition: background-color 0.2s;
+}
+.sidebar ul li:hover .category-count {
+    background-color: #5a6268;
+}
+
+/* Стили для пункта "Все новости" */
+.all-news-item {
+    background-color: #e9ecef;
+    border-radius: 5px;
+    padding: 8px 10px;
+    margin-bottom: 15px;
+}
+
+.all-news-item a {
+    font-weight: 500;
+}
+
+.all-news-count {
+    background-color: #007bff;
+}
+
+.all-news-item:hover {
+    background-color: #dee2e6;
+}
+
+.all-news-item:hover .all-news-count {
+    background-color: #0056b3;
+}
+
+/* Разделитель между "Все новости" и категориями */
+.category-divider {
+    border-bottom: 1px dashed #ced4da;
+    margin-bottom: 15px;
+    list-style-type: none;
 }
