@@ -1,25 +1,29 @@
 h1 {
-    background-color: #a6eae4;
+    background-color: #e9ecef;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.2);
+    border-radius: 8px;
 }
 
 body {
     background-color: #f8f9fa;
     color: #343a40;
+
 }
 .navbar {
     background-color: #343a40;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+
 }
 .navbar-nav .nav-link {
     color: #ffffff;
     transition: color 0.2s;
 }
 .navbar-nav .nav-link:hover {
-    color: #ffc107;
+    color: #0dc8ee;
 }
 .card {
     margin-bottom: 20px;
-    box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+    box-shadow: 0 3px 6px rgba(0,0,0,0.2);
     transition: transform 0.2s;
 }
 .card:hover {
@@ -30,7 +34,7 @@ body {
     color: #ffffff;
     text-align: center;
     padding: 10px 0;
-    box-shadow: 0 -2px 4px rgba(0,0,0,0.1);
+    box-shadow: 0 -2px 4px rgba(0,0,0,0.2);
 }
 /* Стили для бокового меню */
 .sidebar {
@@ -38,7 +42,7 @@ body {
     border-radius: 8px;
     padding: 20px;
     margin-bottom: 20px;
-    box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+    box-shadow: 0 3px 6px rgba(0,0,0,0.2);
     margin-top: 50px; /* Отступ сверху для смещения блока вниз */
 }
 .sidebar h5 {
@@ -48,9 +52,11 @@ body {
     margin-bottom: 18px;
     font-weight: 600;
 }
+/* Стили для списка категорий */
 .sidebar ul {
     list-style-type: none;
     padding-left: 0;
+
 }
 .sidebar ul li {
     margin-bottom: 10px;
@@ -60,6 +66,7 @@ body {
 }
 .sidebar ul li:hover {
     background-color: #e9ecef;
+
 }
 .sidebar ul li a {
     display: block;
@@ -88,10 +95,12 @@ body {
     border-radius: 5px;
     padding: 8px 10px;
     margin-bottom: 15px;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.1);
 }
 
 .all-news-item a {
     font-weight: 500;
+
 }
 
 .all-news-count {

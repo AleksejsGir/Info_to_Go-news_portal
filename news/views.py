@@ -37,7 +37,7 @@ def main(request):
     """
     Представление рендерит шаблон main.html
     """
-    # Используем синтаксис, как у учителя, с распаковкой словаря
+    # Используем синтаксис, с распаковкой словаря
     context = {**info, 'categories_list': get_categories_with_count()}
     return render(request, 'main.html', context=context)
 
@@ -70,7 +70,7 @@ def get_news_by_category(request, category_id):
     articles = Article.objects.select_related('category').prefetch_related('tags').filter(category=category)
 
     # Добавляем пагинацию - 15 новостей на странице
-    paginator = Paginator(articles, 15)
+    paginator = Paginator(articles, 12)
     page = request.GET.get('page')
 
     try:
@@ -82,10 +82,10 @@ def get_news_by_category(request, category_id):
         # Если страница выходит за пределы доступных, выводим последнюю
         paginated_news = paginator.page(paginator.num_pages)
 
-    # Используем синтаксис учителя для создания контекста
+    # Используем синтаксис для создания контекста
     context = {**info,
                'news': paginated_news,
-               'news_count': len(articles),  # len() вместо count() как у учителя
+               'news_count': len(articles),  # len() вместо count()
                'current_category': category,
                'categories_list': get_categories_with_count(),
                }
@@ -104,7 +104,7 @@ def get_news_by_tag(request, tag_id):
     articles = Article.objects.select_related('category').prefetch_related('tags').filter(tags=tag)
 
     # Добавляем пагинацию - 15 новостей на странице
-    paginator = Paginator(articles, 15)
+    paginator = Paginator(articles, 12)
     page = request.GET.get('page')
 
     try:
@@ -116,7 +116,7 @@ def get_news_by_tag(request, tag_id):
         # Если страница выходит за пределы доступных, выводим последнюю
         paginated_news = paginator.page(paginator.num_pages)
 
-    # Используем синтаксис учителя для создания контекста
+    # Используем синтаксис для создания контекста
     context = {**info,
                'news': paginated_news,
                'news_count': len(articles),
@@ -159,7 +159,7 @@ def get_all_news(request):
     articles = Article.objects.select_related('category').prefetch_related('tags').order_by(order_by)
 
     # Добавляем пагинацию - 15 новостей на странице
-    paginator = Paginator(articles, 15)
+    paginator = Paginator(articles, 12)
     page = request.GET.get('page')
 
     try:
