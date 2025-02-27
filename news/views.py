@@ -1,7 +1,7 @@
 from django.http import HttpResponse
 from django.shortcuts import render, get_object_or_404
 
-from .models import Article, Tag
+from .models import Article, Tag, Category  # Добавляем импорт модели Category
 
 """
 Информация в шаблоны будет браться из базы данных
@@ -50,11 +50,31 @@ def get_categories(request):
     return HttpResponse('All categories')
 
 
-def get_news_by_category(request, slug):
+def get_news_by_category(request, category_id):
     """
     Возвращает новости по категории для представления в каталоге
     """
-    return HttpResponse(f'News by category {slug}')
+    # Получаем категорию по ID
+    category = get_object_or_404(Category, id=category_id)
+
+    # Фильтруем статьи по категории
+    articles = Article.objects.select_related('category').prefetch_related('tags').filter(category=category)
+
+    # Подготавливаем информацию для контекста
+    context = {
+        'news': articles,
+        'news_count': articles.count(),
+        'users_count': 5,
+        'current_category': category,
+        "menu": [
+            {"title": "Главная", "url": "/", "url_name": "index"},
+            {"title": "О проекте", "url": "/about/", "url_name": "about"},
+            {"title": "Каталог", "url": "/news/catalog/", "url_name": "catalog"},
+        ],
+    }
+
+    # Возвращаем отрендеренный шаблон каталога с отфильтрованными новостями
+    return render(request, 'news/catalog.html', context=context)
 
 
 def get_news_by_tag(request, tag_id):
