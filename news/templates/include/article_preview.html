@@ -4,14 +4,14 @@
         <h5 class="card-title">#{{ article.id }}. {{ article.title }}</h5>
         <p class="card-text">{{ article.content|truncatechars:50 }}</p>
         <p class="card-text">
-            <a href="{% url 'news_by_category' article.category.id %}" class="text-decoration-none">{{ article.category }}</a>
+            <a href="{% url 'news:news_by_category' article.category.id %}" class="text-decoration-none">{{ article.category }}</a>
         </p>
         {% for tag in article.tags.all %}
-            <a href="{% url 'news_by_tag' tag.id %}" class="badge bg-info text-decoration-none">{{ tag }}</a>
+            <a href="{% url 'news:news_by_tag' tag.id %}" class="badge bg-info text-decoration-none">{{ tag }}</a>
         {% endfor %}
         <p class="card-text">{{ article.publication_date }}</p>
         <p class="card-text">{{ article.views }}</p>
         <p class="card-text">{{ article.favorites_count }}</p>
-        <a href="{% url 'detail_article_by_id' article.id %}" class="btn btn-primary">Подробнее</a>
+        <a href="{% url 'news:detail_article_by_id' article.id %}" class="btn btn-primary">Подробнее</a>
     </div>
 </div>

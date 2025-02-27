@@ -1,6 +1,7 @@
 from django.urls import path
 from . import views
 
+app_name = 'news'  # Добавляем пространство имён 'news'
 
 # будет иметь префикс в urlах /news/
 urlpatterns = [

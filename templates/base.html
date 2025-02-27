@@ -38,7 +38,7 @@
                     <ul>
                         <!-- Пункт "Все новости" -->
                         <li class="all-news-item">
-                            <a href="{% url 'catalog' %}" class="text-decoration-none">
+                            <a href="{% url 'news:catalog' %}" class="text-decoration-none">
                                 <strong>Все новости</strong>
                                 <span class="category-count all-news-count">{{ news_count }}</span>
                             </a>
@@ -48,7 +48,7 @@
                         <!-- Список категорий -->
                         {% for category in categories_list %}
                             <li>
-                                <a href="{% url 'news_by_category' category.id %}" class="text-decoration-none">
+                                <a href="{% url 'news:news_by_category' category.id %}" class="text-decoration-none">
                                     {{ category.name }}
                                     <span class="category-count">{{ category.news_count }}</span>
                                 </a>

@@ -2,7 +2,7 @@ from django.http import HttpResponse
 from django.shortcuts import render, get_object_or_404
 from django.db.models import Count
 
-from .models import Article, Tag, Category  # Добавляем импорт модели Category
+from .models import Article, Tag, Category
 
 """
 Информация в шаблоны будет браться из базы данных
@@ -10,7 +10,6 @@ from .models import Article, Tag, Category  # Добавляем импорт м
 контекст шаблона
 """
 # Пример данных для новостей
-
 info = {
     "users_count": 5,
     "news_count": 10,
@@ -23,7 +22,7 @@ info = {
          "url_name": "about"},
         {"title": "Каталог",
          "url": "/news/catalog/",
-         "url_name": "catalog"},
+         "url_name": "news:catalog"},  # Обновлено для использования пространства имён
     ],
 }
 
@@ -37,15 +36,14 @@ def main(request):
     """
     Представление рендерит шаблон main.html
     """
-    context = info.copy()
-    context['categories_list'] = get_categories_with_count()
+    # Используем синтаксис, как у учителя, с распаковкой словаря
+    context = {**info, 'categories_list': get_categories_with_count()}
     return render(request, 'main.html', context=context)
 
 
 def about(request):
     """Представление рендерит шаблон about.html"""
-    context = info.copy()
-    context['categories_list'] = get_categories_with_count()
+    context = {**info, 'categories_list': get_categories_with_count()}
     return render(request, 'about.html', context=context)
 
 
@@ -70,21 +68,14 @@ def get_news_by_category(request, category_id):
     # Фильтруем статьи по категории
     articles = Article.objects.select_related('category').prefetch_related('tags').filter(category=category)
 
-    # Подготавливаем информацию для контекста
-    context = {
-        'news': articles,
-        'news_count': articles.count(),
-        'users_count': 5,
-        'current_category': category,
-        "menu": [
-            {"title": "Главная", "url": "/", "url_name": "index"},
-            {"title": "О проекте", "url": "/about/", "url_name": "about"},
-            {"title": "Каталог", "url": "/news/catalog/", "url_name": "catalog"},
-        ],
-        'categories_list': get_categories_with_count(),
-    }
+    # Используем синтаксис учителя для создания контекста
+    context = {**info,
+               'news': articles,
+               'news_count': len(articles),  # len() вместо count() как у учителя
+               'current_category': category,
+               'categories_list': get_categories_with_count(),
+               }
 
-    # Возвращаем отрендеренный шаблон каталога с отфильтрованными новостями
     return render(request, 'news/catalog.html', context=context)
 
 
@@ -98,21 +89,14 @@ def get_news_by_tag(request, tag_id):
     # Фильтруем статьи по тегу
     articles = Article.objects.select_related('category').prefetch_related('tags').filter(tags=tag)
 
-    # Подготавливаем информацию для контекста
-    context = {
-        'news': articles,
-        'news_count': articles.count(),
-        'users_count': 5,
-        'current_tag': tag,
-        "menu": [
-            {"title": "Главная", "url": "/", "url_name": "index"},
-            {"title": "О проекте", "url": "/about/", "url_name": "about"},
-            {"title": "Каталог", "url": "/news/catalog/", "url_name": "catalog"},
-        ],
-        'categories_list': get_categories_with_count(),
-    }
+    # Используем синтаксис учителя для создания контекста
+    context = {**info,
+               'news': articles,
+               'news_count': len(articles),
+               'current_tag': tag,
+               'categories_list': get_categories_with_count(),
+               }
 
-    # Возвращаем отрендеренный шаблон каталога с отфильтрованными новостями
     return render(request, 'news/catalog.html', context=context)
 
 
@@ -130,7 +114,6 @@ def get_all_news(request):
     3. Сортировка по количеству просмотров в возрастающем порядке: `/news/catalog/?sort=views&order=asc`
     4. Сортировка по дате добавления в возрастающем порядке: `/news/catalog/?sort=publication_date&order=asc`
     """
-
     # считаем параметры из GET-запроса
     sort = request.GET.get('sort', 'publication_date')  # по умолчанию сортируем по дате загрузки
     order = request.GET.get('order', 'desc')  # по умолчанию сортируем по убыванию
@@ -148,17 +131,12 @@ def get_all_news(request):
 
     articles = Article.objects.select_related('category').prefetch_related('tags').order_by(order_by)
 
-    context = {
-        'news': articles,
-        "users_count": 5,
-        "news_count": 10,
-        "menu": [
-            {"title": "Главная", "url": "/", "url_name": "index"},
-            {"title": "О проекте", "url": "/about/", "url_name": "about"},
-            {"title": "Каталог", "url": "/news/catalog/", "url_name": "catalog"},
-        ],
-        'categories_list': get_categories_with_count(),
-    }
+    # Используем синтаксис учителя для создания контекста
+    context = {**info,
+               'news': articles,
+               'news_count': len(articles),
+               'categories_list': get_categories_with_count(),
+               }
 
     return render(request, 'news/catalog.html', context=context)
 
@@ -168,17 +146,10 @@ def get_detail_article_by_id(request, article_id):
     Возвращает детальную информацию по новости для представления
     """
     article = get_object_or_404(Article, id=article_id)
-    context = {
-        'article': article,
-        "users_count": 5,
-        "news_count": 10,
-        "menu": [
-            {"title": "Главная", "url": "/", "url_name": "index"},
-            {"title": "О проекте", "url": "/about/", "url_name": "about"},
-            {"title": "Каталог", "url": "/news/catalog/", "url_name": "catalog"},
-        ],
-        'categories_list': get_categories_with_count(),
-    }
+    context = {**info,
+               'article': article,
+               'categories_list': get_categories_with_count(),
+               }
     return render(request, 'news/article_detail.html', context=context)
 
 
@@ -187,15 +158,8 @@ def get_detail_article_by_title(request, title):
     Возвращает детальную информацию по новости для представления
     """
     article = get_object_or_404(Article, slug=title)
-    context = {
-        'article': article,
-        "users_count": 5,
-        "news_count": 10,
-        "menu": [
-            {"title": "Главная", "url": "/", "url_name": "index"},
-            {"title": "О проекте", "url": "/about/", "url_name": "about"},
-            {"title": "Каталог", "url": "/news/catalog/", "url_name": "catalog"},
-        ],
-        'categories_list': get_categories_with_count(),
-    }
+    context = {**info,
+               'article': article,
+               'categories_list': get_categories_with_count(),
+               }
     return render(request, 'news/article_detail.html', context=context)
