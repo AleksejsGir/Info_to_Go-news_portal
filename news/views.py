@@ -1,6 +1,7 @@
 from django.http import HttpResponse
 from django.shortcuts import render, get_object_or_404
 from django.db.models import Count
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger  # Добавляем импорт для пагинации
 
 from .models import Article, Tag, Category
 
@@ -68,9 +69,22 @@ def get_news_by_category(request, category_id):
     # Фильтруем статьи по категории
     articles = Article.objects.select_related('category').prefetch_related('tags').filter(category=category)
 
+    # Добавляем пагинацию - 15 новостей на странице
+    paginator = Paginator(articles, 15)
+    page = request.GET.get('page')
+
+    try:
+        paginated_news = paginator.page(page)
+    except PageNotAnInteger:
+        # Если параметр page не является числом, выводим первую страницу
+        paginated_news = paginator.page(1)
+    except EmptyPage:
+        # Если страница выходит за пределы доступных, выводим последнюю
+        paginated_news = paginator.page(paginator.num_pages)
+
     # Используем синтаксис учителя для создания контекста
     context = {**info,
-               'news': articles,
+               'news': paginated_news,
                'news_count': len(articles),  # len() вместо count() как у учителя
                'current_category': category,
                'categories_list': get_categories_with_count(),
@@ -89,9 +103,22 @@ def get_news_by_tag(request, tag_id):
     # Фильтруем статьи по тегу
     articles = Article.objects.select_related('category').prefetch_related('tags').filter(tags=tag)
 
+    # Добавляем пагинацию - 15 новостей на странице
+    paginator = Paginator(articles, 15)
+    page = request.GET.get('page')
+
+    try:
+        paginated_news = paginator.page(page)
+    except PageNotAnInteger:
+        # Если параметр page не является числом, выводим первую страницу
+        paginated_news = paginator.page(1)
+    except EmptyPage:
+        # Если страница выходит за пределы доступных, выводим последнюю
+        paginated_news = paginator.page(paginator.num_pages)
+
     # Используем синтаксис учителя для создания контекста
     context = {**info,
-               'news': articles,
+               'news': paginated_news,
                'news_count': len(articles),
                'current_tag': tag,
                'categories_list': get_categories_with_count(),
@@ -131,9 +158,22 @@ def get_all_news(request):
 
     articles = Article.objects.select_related('category').prefetch_related('tags').order_by(order_by)
 
+    # Добавляем пагинацию - 15 новостей на странице
+    paginator = Paginator(articles, 15)
+    page = request.GET.get('page')
+
+    try:
+        paginated_news = paginator.page(page)
+    except PageNotAnInteger:
+        # Если параметр page не является числом, выводим первую страницу
+        paginated_news = paginator.page(1)
+    except EmptyPage:
+        # Если страница выходит за пределы доступных, выводим последнюю
+        paginated_news = paginator.page(paginator.num_pages)
+
     # Используем синтаксис учителя для создания контекста
     context = {**info,
-               'news': articles,
+               'news': paginated_news,
                'news_count': len(articles),
                'categories_list': get_categories_with_count(),
                }
