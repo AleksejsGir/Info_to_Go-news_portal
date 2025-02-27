@@ -1,5 +1,6 @@
 from django.http import HttpResponse
 from django.shortcuts import render, get_object_or_404
+from django.db.models import Count
 
 from .models import Article, Tag, Category  # Добавляем импорт модели Category
 
@@ -27,16 +28,25 @@ info = {
 }
 
 
+# Функция для получения данных о категориях с подсчетом новостей
+def get_categories_with_count():
+    return Category.objects.annotate(news_count=Count('article')).order_by('name')
+
+
 def main(request):
     """
     Представление рендерит шаблон main.html
     """
-    return render(request, 'main.html', context=info)
+    context = info.copy()
+    context['categories_list'] = get_categories_with_count()
+    return render(request, 'main.html', context=context)
 
 
 def about(request):
     """Представление рендерит шаблон about.html"""
-    return render(request, 'about.html', context=info)
+    context = info.copy()
+    context['categories_list'] = get_categories_with_count()
+    return render(request, 'about.html', context=context)
 
 
 def catalog(request):
@@ -71,6 +81,7 @@ def get_news_by_category(request, category_id):
             {"title": "О проекте", "url": "/about/", "url_name": "about"},
             {"title": "Каталог", "url": "/news/catalog/", "url_name": "catalog"},
         ],
+        'categories_list': get_categories_with_count(),
     }
 
     # Возвращаем отрендеренный шаблон каталога с отфильтрованными новостями
@@ -98,6 +109,7 @@ def get_news_by_tag(request, tag_id):
             {"title": "О проекте", "url": "/about/", "url_name": "about"},
             {"title": "Каталог", "url": "/news/catalog/", "url_name": "catalog"},
         ],
+        'categories_list': get_categories_with_count(),
     }
 
     # Возвращаем отрендеренный шаблон каталога с отфильтрованными новостями
@@ -136,7 +148,7 @@ def get_all_news(request):
 
     articles = Article.objects.select_related('category').prefetch_related('tags').order_by(order_by)
 
-    info = {
+    context = {
         'news': articles,
         "users_count": 5,
         "news_count": 10,
@@ -145,9 +157,10 @@ def get_all_news(request):
             {"title": "О проекте", "url": "/about/", "url_name": "about"},
             {"title": "Каталог", "url": "/news/catalog/", "url_name": "catalog"},
         ],
+        'categories_list': get_categories_with_count(),
     }
 
-    return render(request, 'news/catalog.html', context=info)
+    return render(request, 'news/catalog.html', context=context)
 
 
 def get_detail_article_by_id(request, article_id):
@@ -155,7 +168,7 @@ def get_detail_article_by_id(request, article_id):
     Возвращает детальную информацию по новости для представления
     """
     article = get_object_or_404(Article, id=article_id)
-    info = {
+    context = {
         'article': article,
         "users_count": 5,
         "news_count": 10,
@@ -164,8 +177,9 @@ def get_detail_article_by_id(request, article_id):
             {"title": "О проекте", "url": "/about/", "url_name": "about"},
             {"title": "Каталог", "url": "/news/catalog/", "url_name": "catalog"},
         ],
+        'categories_list': get_categories_with_count(),
     }
-    return render(request, 'news/article_detail.html', context=info)
+    return render(request, 'news/article_detail.html', context=context)
 
 
 def get_detail_article_by_title(request, title):
@@ -173,7 +187,7 @@ def get_detail_article_by_title(request, title):
     Возвращает детальную информацию по новости для представления
     """
     article = get_object_or_404(Article, slug=title)
-    info = {
+    context = {
         'article': article,
         "users_count": 5,
         "news_count": 10,
@@ -182,5 +196,6 @@ def get_detail_article_by_title(request, title):
             {"title": "О проекте", "url": "/about/", "url_name": "about"},
             {"title": "Каталог", "url": "/news/catalog/", "url_name": "catalog"},
         ],
+        'categories_list': get_categories_with_count(),
     }
-    return render(request, 'news/article_detail.html', context=info)
+    return render(request, 'news/article_detail.html', context=context)

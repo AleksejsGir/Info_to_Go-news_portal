@@ -34,6 +34,34 @@
             text-align: center;
             padding: 10px 0;
         }
+        /* Стили для бокового меню */
+        .sidebar {
+            background-color: #f0f0f0;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .sidebar h5 {
+            color: #343a40;
+            border-bottom: 1px solid #dee2e6;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+        .sidebar ul {
+            list-style-type: none;
+            padding-left: 0;
+        }
+        .sidebar ul li {
+            margin-bottom: 8px;
+        }
+        .category-count {
+            float: right;
+            background-color: #6c757d;
+            color: white;
+            border-radius: 10px;
+            padding: 2px 8px;
+            font-size: 0.8rem;
+        }
     </style>
   </head>
   <body>
@@ -53,8 +81,29 @@
         </nav>
     </header>
     <main class="container mt-5">
-        {% block content %}
-        {% endblock %}
+        <div class="row">
+            <!-- Боковое меню с категориями -->
+            <div class="col-md-3">
+                <div class="sidebar">
+                    <h5>Категории новостей</h5>
+                    <ul>
+                        {% for category in categories_list %}
+                            <li>
+                                <a href="{% url 'news_by_category' category.id %}" class="text-decoration-none">
+                                    {{ category.name }}
+                                    <span class="category-count">{{ category.news_count }}</span>
+                                </a>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            <!-- Основной контент -->
+            <div class="col-md-9">
+                {% block content %}
+                {% endblock %}
+            </div>
+        </div>
     </main>
     <footer class="footer mt-5">
         {% block footer %}
