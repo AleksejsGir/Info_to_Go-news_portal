@@ -1,6 +1,6 @@
 from django.http import HttpResponse
 from django.shortcuts import render, get_object_or_404
-from django.db.models import Count
+from django.db.models import Count, Q
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger  # Добавляем импорт для пагинации
 
 from .models import Article, Tag, Category
@@ -184,12 +184,27 @@ def get_all_news(request):
 def get_detail_article_by_id(request, article_id):
     """
     Возвращает детальную информацию по новости для представления
+    с увеличением счетчика просмотров
+
+    Логика работы:
+    1. Получаем статью по ID
+    2. Увеличиваем количество просмотров на 1
+    3. Сохраняем изменения в базе данных
+    4. Передаем статью в контекст шаблона
     """
+    # Получаем статью по ID
     article = get_object_or_404(Article, id=article_id)
+
+    # Увеличиваем количество просмотров
+    article.views += 1
+    article.save()
+
+    # Формируем контекст для шаблона
     context = {**info,
                'article': article,
                'categories_list': get_categories_with_count(),
                }
+
     return render(request, 'news/article_detail.html', context=context)
 
 
@@ -203,3 +218,53 @@ def get_detail_article_by_title(request, title):
                'categories_list': get_categories_with_count(),
                }
     return render(request, 'news/article_detail.html', context=context)
+
+
+def search_news(request):
+    """
+    Представление для поиска новостей по заголовку и содержанию.
+
+    Параметры:
+    - Принимает GET-запрос с параметром 'q' для поиска
+    - Использует Q-объект для поиска по заголовку и содержанию
+    - Применяет постраничную навигацию (12 новостей на странице)
+    """
+    # Получаем поисковый запрос из GET-параметров
+    query = request.GET.get('q', '')
+
+    # Если запрос пустой, возвращаем пустой список
+    if not query:
+        context = {**info,
+                   'news': [],
+                   'query': query,
+                   'categories_list': get_categories_with_count(),
+                   'news_count': 0}
+        return render(request, 'news/search_results.html', context)
+
+    # Создаем сложный запрос с использованием Q для поиска по заголовку и содержанию
+    articles = Article.objects.select_related('category').prefetch_related('tags').filter(
+        Q(title__icontains=query) | Q(content__icontains=query)
+    )
+
+
+    paginator = Paginator(articles, 12)
+    page = request.GET.get('page')
+
+    try:
+        paginated_news = paginator.page(page)
+    except PageNotAnInteger:
+        # Если параметр page не является числом, выводим первую страницу
+        paginated_news = paginator.page(1)
+    except EmptyPage:
+        # Если страница выходит за пределы доступных, выводим последнюю
+        paginated_news = paginator.page(paginator.num_pages)
+
+    # Формируем контекст для шаблона ТОЧНО ПО ВАШЕМУ ШАБЛОНУ
+    context = {**info,
+               'news': paginated_news,
+               'query': query,
+               'news_count': len(articles),
+               'categories_list': get_categories_with_count(),
+               }
+
+    return render(request, 'news/search_results.html', context)

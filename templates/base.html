@@ -22,9 +22,28 @@
                     <span class="navbar-toggler-icon"></span>
                 </button>
                 <div class="collapse navbar-collapse" id="navbarNav">
-                    <ul class="navbar-nav ms-auto">
+                    <ul class="navbar-nav me-auto">
                         {% include "include/nav_menu.html" %}
                     </ul>
+
+                    <!-- Форма поиска -->
+                    <form method="GET" action="{% url 'news:search_news' %}" class="d-flex">
+                        <input
+                            class="form-control me-2"
+                            type="search"
+                            placeholder="Поиск новостей"
+                            aria-label="Search"
+                            name="q"
+                            style="background-color: #495057; color: #ffffff; border: none;"
+                        >
+                        <button
+                            class="btn btn-outline-light"
+                            type="submit"
+                            style="background-color: #6c757d; color: #ffffff;"
+                        >
+                            Найти
+                        </button>
+                    </form>
                 </div>
             </div>
         </nav>

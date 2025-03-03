@@ -45,7 +45,7 @@ body {
     padding: 20px;
     margin-bottom: 20px;
     box-shadow: 0 3px 6px rgba(52, 58, 63);
-    margin-top: 50px; /* Отступ сверху для смещения блока вниз */
+    margin-top: 90px; /* Отступ сверху для смещения блока вниз */
 }
 .sidebar h5 {
     color: #343a40;
@@ -125,4 +125,20 @@ body {
     margin-bottom: 15px;
     list-style-type: none;
 
+}
+/* Стили для карточек новостей */
+.card {
+    background-color: #eeeeee; /* Основной фон */
+    border: none; /* Убрать границу */
+    border-radius: 12px; /* Закругление углов */
+
+
+}
+
+.card-title {
+    color: #2c3e50; /* Цвет заголовка */
+}
+
+.card-text {
+    color: #6c757d; /* Цвет текста */
 }
