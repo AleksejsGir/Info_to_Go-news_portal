@@ -6,7 +6,6 @@ app_name = 'news'  # Пространство имён 'news'
 
 # Маршруты с префиксом /news/
 urlpatterns = [
-    # Существующие маршруты
     path('catalog/', views.get_all_news, name='catalog'),
     path('catalog/<int:article_id>/', views.get_detail_article_by_id, name='detail_article_by_id'),
     path('catalog/category/<int:category_id>/', views.get_news_by_category, name='news_by_category'),
