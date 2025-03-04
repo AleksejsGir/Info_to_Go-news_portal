@@ -19,33 +19,7 @@
         <div class="row row-cols-1 row-cols-md-3 g-4">
             {% for article in news %}
                 <div class="col">
-                    <div class="card h-100">
-                        <div class="card-body">
-                            <h5 class="card-title">#{{ article.id }}. {{ article.title }}</h5>
-                            <p class="card-text">{{ article.content|truncatechars:100 }}</p>
-                            <p class="card-text">
-                                <a href="{% url 'news:news_by_category' article.category.id %}" class="text-decoration-none">
-                                    {{ article.category }}
-                                </a>
-                            </p>
-                            {% for tag in article.tags.all %}
-                                <a href="{% url 'news:news_by_tag' tag.id %}" class="badge bg-info text-decoration-none me-1">
-                                    {{ tag }}
-                                </a>
-                            {% endfor %}
-                            <div class="mt-3">
-                                <small class="text-muted me-3">
-                                    <i class="bi bi-calendar"></i> {{ article.publication_date|date:"d.m.Y" }}
-                                </small>
-                                <small class="text-muted">
-                                    <i class="bi bi-eye"></i> {{ article.views }}
-                                </small>
-                            </div>
-                            <a href="{% url 'news:detail_article_by_id' article.id %}" class="btn btn-primary mt-3">
-                                Читать полностью
-                            </a>
-                        </div>
-                    </div>
+                    {% include "include/article_preview.html" with article=article truncate_length=100 use_tag_margin=True use_formatted_meta=True button_text="Читать полностью" %}
                 </div>
             {% endfor %}
         </div>

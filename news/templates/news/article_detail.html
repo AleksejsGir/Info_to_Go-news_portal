@@ -8,13 +8,29 @@
             <p class="card-text">
                 <a href="{% url 'news:news_by_category' article.category.id %}" class="text-decoration-none">{{ article.category }}</a>
             </p>
-            {% for tag in article.tags.all %}
-                <a href="{% url 'news:news_by_tag' tag.id %}" class="badge bg-info text-decoration-none">{{ tag }}</a>
-            {% endfor %}
-            <p class="card-text">{{ article.id_author }}</p>
-            <p class="card-text">{{ article.publication_date }}</p>
-            <p class="card-text">{{ article.views }}</p>
-            <p class="card-text">{{ article.favorites_count }}</p>
+            <div class="mb-3">
+                {% for tag in article.tags.all %}
+                    <a href="{% url 'news:news_by_tag' tag.id %}" class="badge bg-info text-decoration-none me-1">{{ tag }}</a>
+                {% endfor %}
+            </div>
+
+            {% if article.id_author %}
+                <p class="card-text">Автор: {{ article.id_author }}</p>
+            {% endif %}
+
+            <div class="mt-3">
+                <small class="text-muted me-3">
+                    <i class="bi bi-calendar"></i> {{ article.publication_date|date:"d.m.Y" }}
+                </small>
+                <small class="text-muted me-3">
+                    <i class="bi bi-eye"></i> {{ article.views }} просмотров
+                </small>
+                {% if article.favorites_count != None %}
+                    <small class="text-muted">
+                        <i class="bi bi-heart"></i> {{ article.favorites_count }} в избранном
+                    </small>
+                {% endif %}
+            </div>
         </div>
     </div>
 {% endblock %}
