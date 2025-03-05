@@ -88,3 +88,29 @@ class Article(models.Model):
     def __str__(self):
         return self.title
 
+
+
+class Like(models.Model):
+    """
+    Модель для хранения лайков к статьям
+    Каждый IP может лайкнуть статью только один раз
+    """
+    article = models.ForeignKey(
+        Article,
+        on_delete=models.CASCADE,
+        related_name='likes',
+        verbose_name='Статья'
+    )
+    ip_address = models.GenericIPAddressField(verbose_name='IP-адрес')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Время лайка')
+
+    class Meta:
+        db_table = 'Likes'
+        verbose_name = 'Лайк'
+        verbose_name_plural = 'Лайки'
+        unique_together = ('article', 'ip_address')  # Уникальность лайка
+
+    def __str__(self):
+        return f"Лайк статьи {self.article.title}"
+
+

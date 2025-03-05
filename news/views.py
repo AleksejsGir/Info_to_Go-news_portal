@@ -1,9 +1,11 @@
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render, get_object_or_404
 from django.db.models import Count, Q
-from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger  # Добавляем импорт для пагинации
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.views.decorators.http import require_POST
+from django.views.decorators.csrf import csrf_protect
 
-from .models import Article, Tag, Category
+from .models import Article, Tag, Category, Like  # Добавляем импорт модели Like
 
 """
 Информация в шаблоны будет браться из базы данных
@@ -26,6 +28,67 @@ info = {
          "url_name": "news:catalog"},  # Обновлено для использования пространства имён
     ],
 }
+
+
+@csrf_protect  # Защита от межсайтовой подделки запросов
+@require_POST  # Разрешаем только POST-запросы
+def toggle_like(request, article_id):
+    """
+    Обработчик для добавления/удаления лайка
+
+    Логика:
+    1. Получаем статью по ID
+    2. Определяем IP-адрес пользователя
+    3. Проверяем существование лайка
+    4. Добавляем или удаляем лайк
+    5. Возвращаем JSON с результатом
+    """
+    try:
+        # Получаем статью или возвращаем 404
+        article = get_object_or_404(Article, id=article_id)
+
+        # Получаем IP-адрес клиента
+        ip_address = request.META.get('REMOTE_ADDR')
+
+        # Проверяем существование лайка
+        like, created = Like.objects.get_or_create(
+            article=article,
+            ip_address=ip_address
+        )
+
+        # Инициализируем список лайкнутых статей, если его нет
+        if 'liked_articles' not in request.session:
+            request.session['liked_articles'] = []
+
+        # Если лайк уже существует - удаляем
+        if not created:
+            like.delete()
+            liked = False
+
+            # Удаляем из сессии, если статья была в списке лайкнутых
+            if article.id in request.session['liked_articles']:
+                request.session['liked_articles'].remove(article.id)
+                request.session.modified = True
+        else:
+            liked = True
+
+            # Добавляем в сессию, если статьи не было в списке лайкнутых
+            if article.id not in request.session['liked_articles']:
+                request.session['liked_articles'].append(article.id)
+                request.session.modified = True
+
+        # Получаем актуальное количество лайков
+        likes_count = article.likes.count()
+
+        return JsonResponse({
+            'liked': liked,
+            'likes_count': likes_count
+        })
+
+    except Exception as e:
+        # Логируем возможные ошибки
+        print(f"Ошибка при обработке лайка: {e}")
+        return JsonResponse({'error': 'Произошла ошибка'}, status=400)
 
 
 # Функция для получения данных о категориях с подсчетом новостей
@@ -171,7 +234,6 @@ def get_all_news(request):
         # Если страница выходит за пределы доступных, выводим последнюю
         paginated_news = paginator.page(paginator.num_pages)
 
-
     context = {**info,
                'news': paginated_news,
                'news_count': len(articles),
@@ -198,6 +260,27 @@ def get_detail_article_by_id(request, article_id):
     # Увеличиваем количество просмотров
     article.views += 1
     article.save()
+
+    # Получаем IP-адрес клиента
+    ip_address = request.META.get('REMOTE_ADDR')
+
+    # Проверяем, лайкнул ли текущий IP эту статью
+    is_liked = Like.objects.filter(article=article, ip_address=ip_address).exists()
+
+    # Инициализируем список лайкнутых статей в сессии, если его нет
+    if 'liked_articles' not in request.session:
+        request.session['liked_articles'] = []
+
+    # Обновляем список лайкнутых статей в сессии
+    liked_articles = request.session['liked_articles']
+    if is_liked and article.id not in liked_articles:
+        liked_articles.append(article.id)
+        request.session['liked_articles'] = liked_articles
+        request.session.modified = True
+    elif not is_liked and article.id in liked_articles:
+        liked_articles.remove(article.id)
+        request.session['liked_articles'] = liked_articles
+        request.session.modified = True
 
     # Формируем контекст для шаблона
     context = {**info,
@@ -245,7 +328,6 @@ def search_news(request):
     articles = Article.objects.select_related('category').prefetch_related('tags').filter(
         Q(title__icontains=query) | Q(content__icontains=query)
     )
-
 
     paginator = Paginator(articles, 12)
     page = request.GET.get('page')

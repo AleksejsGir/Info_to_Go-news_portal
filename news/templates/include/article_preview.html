@@ -15,13 +15,25 @@
         {% endfor %}
 
         {% if use_formatted_meta %}
-            <div class="mt-3">
-                <small class="text-muted me-3">
-                    <i class="bi bi-calendar"></i> {{ article.publication_date|date:"d.m.Y" }}
-                </small>
-                <small class="text-muted">
-                    <i class="bi bi-eye"></i> {{ article.views }}
-                </small>
+            <div class="mt-3 d-flex justify-content-between align-items-center">
+                <div>
+                    <small class="text-muted me-3">
+                        <i class="bi bi-calendar"></i> {{ article.publication_date|date:"d.m.Y" }}
+                    </small>
+                    <small class="text-muted">
+                        <i class="bi bi-eye"></i> {{ article.views }}
+                    </small>
+                </div>
+                <!-- Добавляем кнопку лайка -->
+                <div class="like-container">
+                    <button
+                        class="btn btn-sm btn-outline-danger like-button"
+                        data-article-id="{{ article.id }}"
+                    >
+                        <i class="bi bi-heart{% if request.session.liked_articles and article.id in request.session.liked_articles %} text-danger{% endif %}"></i>
+                        <span class="likes-count">{{ article.likes.count }}</span>
+                    </button>
+                </div>
             </div>
         {% else %}
             <p class="card-text">{{ article.publication_date|date:"d.m.Y" }}</p>
@@ -31,6 +43,16 @@
                     Избранное: {{ article.favorites_count }}
                 {% endif %}
             </p>
+            <!-- Добавляем кнопку лайка для неформатированного режима -->
+            <div class="like-container mb-3">
+                <button
+                    class="btn btn-sm btn-outline-danger like-button"
+                    data-article-id="{{ article.id }}"
+                >
+                    <i class="bi bi-heart{% if request.session.liked_articles and article.id in request.session.liked_articles %} text-danger{% endif %}"></i>
+                    <span class="likes-count">{{ article.likes.count }}</span>
+                </button>
+            </div>
         {% endif %}
 
         <a href="{% url 'news:detail_article_by_id' article.id %}" class="btn btn-primary {% if use_formatted_meta %}mt-3{% endif %}">

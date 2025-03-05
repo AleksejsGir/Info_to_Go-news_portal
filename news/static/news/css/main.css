@@ -142,3 +142,42 @@ body {
 .card-text {
     color: #6c757d; /* Цвет текста */
 }
+
+
+/* Новые стили для кнопки лайка */
+.like-button {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    transition: all 0.3s ease;
+}
+
+.like-button:hover {
+    transform: scale(1.05);
+}
+
+.like-button i {
+    transition: color 0.3s ease;
+}
+
+.like-button i.text-danger {
+    color: #dc3545 !important;
+    animation: pulse 0.5s ease;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+}
+
+.likes-count {
+    font-weight: bold;
+    margin-left: 5px;
+    color: #6c757d;
+}
+
+/*
+- Протестировать адаптивность стилей
+- Добавить варианты для разных состояний кнопки
+*/
