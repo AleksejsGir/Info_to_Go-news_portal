@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+
+{% block title %}Избранные новости{% endblock %}
+
+{% block content %}
+    <h1 class="text-center mb-4">Избранные новости</h1>
+
+    {% if news_count > 0 %}
+        <p class="text-center">Всего в избранном: {{ news_count }}</p>
+        <div class="row g-4">
+            {% for article in news %}
+                <div class="col-md-4">
+                    {% include "include/article_preview.html" with article=article truncate_length=50 use_tag_margin=True use_formatted_meta=True %}
+                </div>
+            {% endfor %}
+        </div>
+
+        <!------------------ Добавляем пагинацию --------------------->
+        {% if news.paginator.num_pages > 1 %}
+        <nav aria-label="Page navigation" class="mt-4">
+            <ul class="pagination justify-content-center">
+                {% if news.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ news.previous_page_number }}" aria-label="Предыдущая">
+                            <span aria-hidden="true">&laquo; Предыдущая</span>
+                        </a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link" aria-hidden="true">&laquo; Предыдущая</span>
+                    </li>
+                {% endif %}
+
+                <li class="page-item active">
+                    <span class="page-link">
+                        Страница {{ news.number }} из {{ news.paginator.num_pages }}
+                    </span>
+                </li>
+
+                {% if news.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ news.next_page_number }}" aria-label="Следующая">
+                            <span aria-hidden="true">Следующая &raquo;</span>
+                        </a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link" aria-hidden="true">Следующая &raquo;</span>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    {% else %}
+        <div class="alert alert-info text-center" role="alert">
+            У вас пока нет избранных новостей.
+            <br>
+            <a href="{% url 'news:catalog' %}" class="btn btn-primary mt-3">Перейти в каталог новостей</a>
+        </div>
+    {% endif %}
+{% endblock %}

@@ -14,4 +14,7 @@ urlpatterns = [
 
     # Новый маршрут для лайков
     path('toggle_like/<int:article_id>/', views.toggle_like, name='toggle_like'),
+    # Маршруты для избранного
+    path('toggle_favorite/<int:article_id>/', views.toggle_favorite, name='toggle_favorite'),
+    path('favorites/', views.get_favorite_news, name='favorite_news'),
 ]

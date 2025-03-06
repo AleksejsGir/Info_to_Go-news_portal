@@ -24,8 +24,18 @@
                         <i class="bi bi-eye"></i> {{ article.views }}
                     </small>
                 </div>
-                <!-- Добавляем кнопку лайка -->
-                <div class="like-container">
+                <!-- Добавляем контейнер для кнопок -->
+                <div class="d-flex">
+                    <!-- Кнопка избранного -->
+                    <button
+                        class="btn btn-sm btn-outline-warning favorite-button me-2"
+                        data-article-id="{{ article.id }}"
+                    >
+                        <i class="bi bi-bookmark{% if request.session.favorite_articles and article.id in request.session.favorite_articles %}-fill{% endif %}"></i>
+                        <span class="favorites-count">{{ article.favorites.count }}</span>
+                    </button>
+
+                    <!-- Кнопка лайка -->
                     <button
                         class="btn btn-sm btn-outline-danger like-button"
                         data-article-id="{{ article.id }}"
@@ -43,8 +53,18 @@
                     Избранное: {{ article.favorites_count }}
                 {% endif %}
             </p>
-            <!-- Добавляем кнопку лайка для неформатированного режима -->
-            <div class="like-container mb-3">
+            <!-- Добавляем контейнер для кнопок -->
+            <div class="d-flex mb-3">
+                <!-- Кнопка избранного -->
+                <button
+                    class="btn btn-sm btn-outline-warning favorite-button me-2"
+                    data-article-id="{{ article.id }}"
+                >
+                    <i class="bi bi-bookmark{% if request.session.favorite_articles and article.id in request.session.favorite_articles %}-fill{% endif %}"></i>
+                    <span class="favorites-count">{{ article.favorites.count }}</span>
+                </button>
+
+                <!-- Кнопка лайка -->
                 <button
                     class="btn btn-sm btn-outline-danger like-button"
                     data-article-id="{{ article.id }}"

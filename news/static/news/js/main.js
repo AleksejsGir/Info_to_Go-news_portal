@@ -33,6 +33,41 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     });
+
+    // Добавляем обработчик для кнопок избранного
+    const favoriteButtons = document.querySelectorAll('.favorite-button');
+
+    favoriteButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const articleId = this.dataset.articleId;
+            const bookmarkIcon = this.querySelector('i');
+            const favoritesCountSpan = this.querySelector('.favorites-count');
+
+            fetch(`/news/toggle_favorite/${articleId}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Обновляем количество добавлений в избранное
+                favoritesCountSpan.textContent = data.favorites_count;
+
+                // Переключаем иконку избранного
+                if (data.is_favorite) {
+                    bookmarkIcon.classList.remove('bi-bookmark');
+                    bookmarkIcon.classList.add('bi-bookmark-fill');
+                } else {
+                    bookmarkIcon.classList.remove('bi-bookmark-fill');
+                    bookmarkIcon.classList.add('bi-bookmark');
+                }
+            })
+            .catch(error => {
+                console.error('Ошибка при добавлении в избранное:', error);
+            });
+        });
+    });
 });
 
 // Функция для получения CSRF токена

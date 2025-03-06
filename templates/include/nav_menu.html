@@ -7,4 +7,14 @@
             <li class="nav-item"><hr class="dropdown-divider"/></li>
         {% endif %}
     {% endfor %}
+
+    <!-- Разделитель перед пунктом "Избранное" -->
+    #<li class="nav-item"><hr class="dropdown-divider"/></li>
+
+    <!-- Пункт "Избранное" -->
+    <li class="nav-item">
+        <a class="nav-link" href="{% url 'news:favorite_news' %}">
+            <i class="bi bi-bookmark"></i> Избранное
+        </a>
+    </li>
 </ul>

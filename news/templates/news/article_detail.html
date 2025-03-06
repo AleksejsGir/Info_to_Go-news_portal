@@ -33,7 +33,17 @@
                     {% endif %}
                 </div>
 
-                <div class="like-container">
+                <div class="d-flex">
+                    <!-- Кнопка избранного -->
+                    <button
+                        class="btn btn-outline-warning favorite-button me-2"
+                        data-article-id="{{ article.id }}"
+                    >
+                        <i class="bi bi-bookmark{% if request.session.favorite_articles and article.id in request.session.favorite_articles %}-fill{% endif %}"></i>
+                        <span class="favorites-count">{{ article.favorites.count }}</span>
+                    </button>
+
+                    <!-- Кнопка лайка -->
                     <button
                         class="btn btn-outline-danger like-button"
                         data-article-id="{{ article.id }}"

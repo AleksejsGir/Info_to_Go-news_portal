@@ -114,3 +114,25 @@ class Like(models.Model):
         return f"Лайк статьи {self.article.title}"
 
 
+class Favorite(models.Model):
+    """
+    Модель для хранения избранных статей
+    Каждый IP может добавить статью в избранное только один раз
+    """
+    article = models.ForeignKey(
+        Article,
+        on_delete=models.CASCADE,
+        related_name='favorites',
+        verbose_name='Статья'
+    )
+    ip_address = models.GenericIPAddressField(verbose_name='IP-адрес')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Время добавления')
+
+    class Meta:
+        db_table = 'Favorites'
+        verbose_name = 'Избранное'
+        verbose_name_plural = 'Избранное'
+        unique_together = ('article', 'ip_address')  # Уникальность избранного
+
+    def __str__(self):
+        return f"Избранная статья {self.article.title}"

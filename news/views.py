@@ -5,7 +5,7 @@ from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_protect
 
-from .models import Article, Tag, Category, Like  # Добавляем импорт модели Like
+from .models import Article, Tag, Category, Like, Favorite  # Добавляем импорт модели Like
 
 """
 Информация в шаблоны будет браться из базы данных
@@ -34,6 +34,7 @@ info = {
 @require_POST  # Разрешаем только POST-запросы
 def toggle_like(request, article_id):
     """
+                    05.03.2025
     Обработчик для добавления/удаления лайка
 
     Логика:
@@ -91,6 +92,116 @@ def toggle_like(request, article_id):
         return JsonResponse({'error': 'Произошла ошибка'}, status=400)
 
 
+
+
+@csrf_protect  # Защита от межсайтовой подделки запросов
+@require_POST  # Разрешаем только POST-запросы
+def toggle_favorite(request, article_id):
+    """
+                    06.03.2025
+    Обработчик для добавления/удаления статьи из избранного
+
+    Логика:
+    1. Получаем статью по ID
+    2. Определяем IP-адрес пользователя
+    3. Проверяем существование статьи в избранном
+    4. Добавляем или удаляем из избранного
+    5. Возвращаем JSON с результатом
+    """
+    try:
+        # Получаем статью или возвращаем 404
+        article = get_object_or_404(Article, id=article_id)
+
+        # Получаем IP-адрес клиента
+        ip_address = request.META.get('REMOTE_ADDR')
+
+        # Проверяем существование в избранном
+        favorite, created = Favorite.objects.get_or_create(
+            article=article,
+            ip_address=ip_address
+        )
+
+        # Инициализируем список избранных статей, если его нет
+        if 'favorite_articles' not in request.session:
+            request.session['favorite_articles'] = []
+
+        # Если статья уже в избранном - удаляем
+        if not created:
+            favorite.delete()
+            is_favorite = False
+
+            # Удаляем из сессии, если статья была в списке избранных
+            if article.id in request.session['favorite_articles']:
+                request.session['favorite_articles'].remove(article.id)
+                request.session.modified = True
+        else:
+            is_favorite = True
+
+            # Добавляем в сессию, если статьи не было в списке избранных
+            if article.id not in request.session['favorite_articles']:
+                request.session['favorite_articles'].append(article.id)
+                request.session.modified = True
+
+        # Получаем актуальное количество добавлений в избранное
+        favorites_count = article.favorites.count()
+
+        return JsonResponse({
+            'is_favorite': is_favorite,
+            'favorites_count': favorites_count
+        })
+
+    except Exception as e:
+        # Логируем возможные ошибки
+        print(f"Ошибка при обработке добавления в избранное: {e}")
+        return JsonResponse({'error': 'Произошла ошибка'}, status=400)
+
+
+def get_favorite_news(request):
+    """
+                    06.03.2025
+    Представление для отображения избранных новостей пользователя
+
+    Логика:
+    1. Получаем IP-адрес пользователя
+    2. Фильтруем избранные статьи по IP
+    3. Возвращаем страницу с избранными статьями
+    """
+    # Получаем IP-адрес клиента
+    ip_address = request.META.get('REMOTE_ADDR')
+
+    # Получаем ID избранных статей
+    favorite_articles = Favorite.objects.filter(
+        ip_address=ip_address
+    ).values_list('article_id', flat=True)
+
+    # Получаем сами статьи
+    articles = Article.objects.select_related('category').prefetch_related('tags').filter(
+        id__in=favorite_articles
+    )
+
+    # Добавляем пагинацию - 9 новостей на странице
+    paginator = Paginator(articles, 9)
+    page = request.GET.get('page')
+
+    try:
+        paginated_news = paginator.page(page)
+    except PageNotAnInteger:
+        # Если параметр page не является числом, выводим первую страницу
+        paginated_news = paginator.page(1)
+    except EmptyPage:
+        # Если страница выходит за пределы доступных, выводим последнюю
+        paginated_news = paginator.page(paginator.num_pages)
+
+    context = {**info,
+            'news': paginated_news,
+            'news_count': len(articles),
+            'categories_list': get_categories_with_count(),
+            'is_favorites_page': True,
+            }
+
+    return render(request, 'news/favorites.html', context=context)
+
+
 # Функция для получения данных о категориях с подсчетом новостей
 def get_categories_with_count():
     return Category.objects.annotate(news_count=Count('article')).order_by('name')
@@ -132,8 +243,8 @@ def get_news_by_category(request, category_id):
     # Фильтруем статьи по категории
     articles = Article.objects.select_related('category').prefetch_related('tags').filter(category=category)
 
-    # Добавляем пагинацию - 15 новостей на странице
-    paginator = Paginator(articles, 12)
+    # Добавляем пагинацию - 9 новостей на странице
+    paginator = Paginator(articles, 9)
     page = request.GET.get('page')
 
     try:
@@ -166,8 +277,8 @@ def get_news_by_tag(request, tag_id):
     # Фильтруем статьи по тегу
     articles = Article.objects.select_related('category').prefetch_related('tags').filter(tags=tag)
 
-    # Добавляем пагинацию - 15 новостей на странице
-    paginator = Paginator(articles, 12)
+    # Добавляем пагинацию - 9 новостей на странице
+    paginator = Paginator(articles, 9)
     page = request.GET.get('page')
 
     try:
@@ -221,8 +332,8 @@ def get_all_news(request):
 
     articles = Article.objects.select_related('category').prefetch_related('tags').order_by(order_by)
 
-    # Добавляем пагинацию - 12 новостей на странице
-    paginator = Paginator(articles, 12)
+    # Добавляем пагинацию - 9 новостей на странице
+    paginator = Paginator(articles, 9)
     page = request.GET.get('page')
 
     try:
