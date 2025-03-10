@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Добавление новой статьи</h1>
+
+    <form method="post">
+        {% csrf_token %}
+
+        <div class="mb-3">
+            {{ form.title.label_tag }}
+            {{ form.title }}
+            {% if form.title.errors %}
+                <div class="text-danger">
+                    {{ form.title.errors }}
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="mb-3">
+            {{ form.content.label_tag }}
+            {{ form.content }}
+            {% if form.content.errors %}
+                <div class="text-danger">
+                    {{ form.content.errors }}
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="mb-3">
+            {{ form.category.label_tag }}
+            {{ form.category }}
+            {% if form.category.errors %}
+                <div class="text-danger">
+                    {{ form.category.errors }}
+                </div>
+            {% endif %}
+        </div>
+
+
+        <button type="submit" class="btn btn-primary">Добавить статью</button>
+    </form>
+</div>
+        <div class="col-6 col-lg-6">
+            <h2>Подсказка</h2>
+            <p>Для добавления новости заполните форму и нажмите кнопку "Отправить".</p>
+            <p>Поля формы:</p>
+            <ul>
+                <li><strong>Заголовок</strong> - заголовок новости</li>
+                <li><strong>Содержание</strong> - описание новости</li>
+                <li><strong>Ссылка</strong> - ссылка на новость</li>
+                <li><strong>Изображение</strong> - изображение новость</li>
+            </ul>
+            <p>После отправки формы новость будет добавлена на главную страницу.</p>
+        </div>
+    </div>
+{% endblock %}

@@ -17,4 +17,6 @@ urlpatterns = [
     # Маршруты для избранного
     path('toggle_favorite/<int:article_id>/', views.toggle_favorite, name='toggle_favorite'),
     path('favorites/', views.get_favorite_news, name='favorite_news'),
+    path('add/', views.add_article, name='add_article'),
+
 ]

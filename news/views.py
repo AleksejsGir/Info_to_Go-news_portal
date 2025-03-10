@@ -1,5 +1,5 @@
 from django.http import HttpResponse, JsonResponse
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, get_object_or_404, redirect
 from django.db.models import Count, Q
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.views.decorators.http import require_POST
@@ -7,6 +7,7 @@ from django.views.decorators.csrf import csrf_protect
 
 from .models import Article, Tag, Category, Like, Favorite  # Добавляем импорт модели Like
 
+from .forms import ArticleForm
 """
 Информация в шаблоны будет браться из базы данных
 Но пока, мы сделаем переменные, куда будем записывать информацию, которая пойдет в 
@@ -461,3 +462,34 @@ def search_news(request):
                }
 
     return render(request, 'news/search_results.html', context)
+
+
+
+def add_article(request):
+    """
+    Представление для добавления новой статьи
+    Обрабатывает GET и POST запросы
+    """
+    if request.method == 'POST':
+        # Создаем форму с данными из POST-запроса
+        form = ArticleForm(request.POST)
+
+        # Проверяем валидность формы
+        if form.is_valid():
+            # Сохраняем новую статью
+            article = form.save()
+
+            # Перенаправляем на страницу детального просмотра новой статьи
+            return redirect('news:detail_article_by_id', article_id=article.id)
+    else:
+        # Создаем пустую форму для GET-запроса
+        form = ArticleForm()
+
+    # Формируем контекст для шаблона
+    context = {
+        **info,  # Используем словарь info из существующих views
+        'form': form,
+        'categories_list': get_categories_with_count(),
+    }
+
+    return render(request, 'news/add_article.html', context=context)
