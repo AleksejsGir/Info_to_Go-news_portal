@@ -464,32 +464,80 @@ def search_news(request):
     return render(request, 'news/search_results.html', context)
 
 
-
 def add_article(request):
-    """
-    Представление для добавления новой статьи
-    Обрабатывает GET и POST запросы
-    """
     if request.method == 'POST':
-        # Создаем форму с данными из POST-запроса
         form = ArticleForm(request.POST)
-
-        # Проверяем валидность формы
         if form.is_valid():
-            # Сохраняем новую статью
-            article = form.save()
+            # Извлекаем валидированные данные
+            title = form.cleaned_data['title']
+            content = form.cleaned_data['content']
+            category = form.cleaned_data['category']
+            tags = form.cleaned_data['tags']
 
-            # Перенаправляем на страницу детального просмотра новой статьи
+            # Создаем объект статьи
+            article = Article(
+                title=title,
+                content=content,
+                category=category,
+                views=0,
+                status=Article.Status.UNCHECKED
+            )
+
+            # Сохраняем статью
+            article.save()
+
+            # Добавляем теги к статье
+            article.tags.set(tags)
+
             return redirect('news:detail_article_by_id', article_id=article.id)
     else:
-        # Создаем пустую форму для GET-запроса
         form = ArticleForm()
 
-    # Формируем контекст для шаблона
     context = {
-        **info,  # Используем словарь info из существующих views
+        **info,
         'form': form,
         'categories_list': get_categories_with_count(),
     }
 
     return render(request, 'news/add_article.html', context=context)
+
+
+def article_update(request, article_id):
+    # Получаем статью или возвращаем 404
+    article = get_object_or_404(Article, id=article_id)
+
+    if request.method == 'POST':
+        # Создаем форму с данными из POST-запроса и FILES
+        form = ArticleForm(request.POST, request.FILES, instance=article)
+        if form.is_valid():
+            # Сохраняем изменения
+            form.save()
+            return redirect('news:detail_article_by_id', article_id=article.id)
+    else:
+        # Создаем форму с текущими данными статьи
+        form = ArticleForm(instance=article)
+
+    context = {
+        **info,
+        'form': form,
+        'article': article,
+        'categories_list': get_categories_with_count(),
+    }
+    return render(request, 'news/edit_article.html', context)
+
+
+def article_delete(request, article_id):
+    # Получаем статью или возвращаем 404
+    article = get_object_or_404(Article, id=article_id)
+
+    if request.method == 'POST':
+        # Удаляем статью
+        article.delete()
+        return redirect('news:catalog')
+
+    context = {
+        **info,
+        'article': article,
+        'categories_list': get_categories_with_count(),
+    }
+    return render(request, 'news/delete_article.html', context)

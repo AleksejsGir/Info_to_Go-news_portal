@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.querySelector('h1').classList.toggle('bg-warning');
     });
 
-    // Упрощенная функция для лайков
+     // Упрощенная функция для лайков
     const likeButtons = document.querySelectorAll('.like-button');
 
     likeButtons.forEach(button => {

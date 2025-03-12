@@ -3,14 +3,29 @@
 {% block content %}
     <div class="card">
         <div class="card-body">
+            {% if article.image %}
+                <img
+                    src="{{ article.image.url }}"
+                    alt="{{ article.title }}"
+                    class="img-fluid rounded mb-4"
+                >
+            {% endif %}
+
             <h5 class="card-title">{% upper_words article.title %}</h5>
+
             <p class="card-text">{{ article.content }}</p>
+
             <p class="card-text">
-                <a href="{% url 'news:news_by_category' article.category.id %}" class="text-decoration-none">{{ article.category }}</a>
+                <a href="{% url 'news:news_by_category' article.category.id %}" class="text-decoration-none">
+                    {{ article.category }}
+                </a>
             </p>
+
             <div class="mb-3">
                 {% for tag in article.tags.all %}
-                    <a href="{% url 'news:news_by_tag' tag.id %}" class="badge bg-info text-decoration-none me-1">{{ tag }}</a>
+                    <a href="{% url 'news:news_by_tag' tag.id %}" class="badge bg-info text-decoration-none me-1">
+                        {{ tag }}
+                    </a>
                 {% endfor %}
             </div>
 
@@ -33,7 +48,7 @@
                     {% endif %}
                 </div>
 
-                <div class="d-flex">
+                <div class="d-flex align-items-center">
                     <!-- Кнопка избранного -->
                     <button
                         class="btn btn-outline-warning favorite-button me-2"
@@ -45,12 +60,28 @@
 
                     <!-- Кнопка лайка -->
                     <button
-                        class="btn btn-outline-danger like-button"
+                        class="btn btn-outline-danger like-button me-2"
                         data-article-id="{{ article.id }}"
                     >
                         <i class="bi bi-heart{% if request.session.liked_articles and article.id in request.session.liked_articles %} text-danger{% endif %}"></i>
                         <span class="likes-count">{{ article.likes.count }}</span>
                     </button>
+
+                    <!-- Кнопки управления статьей -->
+                    <div class="btn-group" role="group">
+                        <a
+                            href="{% url 'news:article_update' article.id %}"
+                            class="btn btn-warning btn-sm"
+                        >
+                            <i class="bi bi-pencil"></i> Редактировать
+                        </a>
+                        <a
+                            href="{% url 'news:article_delete' article.id %}"
+                            class="btn btn-danger btn-sm"
+                        >
+                            <i class="bi bi-trash"></i> Удалить
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>

@@ -9,7 +9,7 @@
         <p class="text-center">Всего в избранном: {{ news_count }}</p>
         <div class="row g-4">
             {% for article in news %}
-                <div class="col-md-4">
+                <div class="col-md-6">
                     {% include "include/article_preview.html" with article=article truncate_length=50 use_tag_margin=True use_formatted_meta=True %}
                 </div>
             {% endfor %}

@@ -4,7 +4,7 @@
 <div class="container mt-4">
     <h1 class="mb-4">Добавление новой статьи</h1>
 
-    <form method="post">
+    <form method="post" enctype="multipart/form-data">
         {% csrf_token %}
 
         <div class="mb-3">
@@ -37,21 +37,51 @@
             {% endif %}
         </div>
 
+        <div class="mb-3">
+            {{ form.tags.label_tag }}
+            <div class="row">
+                {% for tag in form.tags %}
+                    <div class="col-md-3 col-sm-6">
+                        <div class="form-check">
+                            {{ tag.tag }}
+                            {{ tag.choice_label }}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+            {% if form.tags.errors %}
+                <div class="text-danger">
+                    {{ form.tags.errors }}
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Добавляем поле для загрузки изображения -->
+        <div class="mb-3">
+            {{ form.image.label_tag }}
+            {{ form.image }}
+            {% if form.image.errors %}
+                <div class="text-danger">
+                    {{ form.image.errors }}
+                </div>
+            {% endif %}
+        </div>
 
         <button type="submit" class="btn btn-primary">Добавить статью</button>
     </form>
-</div>
-        <div class="col-6 col-lg-6">
-            <h2>Подсказка</h2>
-            <p>Для добавления новости заполните форму и нажмите кнопку "Отправить".</p>
-            <p>Поля формы:</p>
-            <ul>
-                <li><strong>Заголовок</strong> - заголовок новости</li>
-                <li><strong>Содержание</strong> - описание новости</li>
-                <li><strong>Ссылка</strong> - ссылка на новость</li>
-                <li><strong>Изображение</strong> - изображение новость</li>
-            </ul>
-            <p>После отправки формы новость будет добавлена на главную страницу.</p>
-        </div>
+
+    <div class="col-6 col-lg-6 mt-4">
+        <h2>Подсказка</h2>
+        <p>Для добавления новости заполните форму и нажмите кнопку "Добавить статью".</p>
+        <p>Поля формы:</p>
+        <ul>
+            <li><strong>Заголовок</strong> - заголовок новости</li>
+            <li><strong>Содержание</strong> - описание новости</li>
+            <li><strong>Категория</strong> - выберите категорию новости</li>
+            <li><strong>Теги</strong> - выберите подходящие теги</li>
+            <li><strong>Изображение</strong> - добавьте изображение для статьи</li>
+        </ul>
+        <p>После отправки формы новость будет добавлена в каталог.</p>
     </div>
+</div>
 {% endblock %}

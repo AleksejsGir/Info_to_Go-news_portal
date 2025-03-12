@@ -1,7 +1,6 @@
 # news/forms.py
 from django import forms
-from .models import Article, Category
-
+from .models import Article, Category, Tag
 
 class ArticleForm(forms.ModelForm):
     """
@@ -11,10 +10,16 @@ class ArticleForm(forms.ModelForm):
     - Встроенная валидация полей
     - Упрощенное сохранение данных
     """
+    tags = forms.ModelMultipleChoiceField(
+        queryset=Tag.objects.all(),
+        widget=forms.CheckboxSelectMultiple,
+        required=False,
+        label='Теги'
+    )
 
     class Meta:
         model = Article
-        fields = ['title', 'content', 'category']
+        fields = ['title', 'content', 'category', 'tags', 'image']
 
         # Настройка виджетов для улучшения пользовательского интерфейса
         widgets = {
@@ -30,7 +35,13 @@ class ArticleForm(forms.ModelForm):
             'category': forms.Select(attrs={
                 'class': 'form-select'
             }),
-
+            'image': forms.ClearableFileInput(attrs={
+                'class': 'form-control'
+            }),
+            'tags': forms.SelectMultiple(attrs={
+                'class': 'form-select',
+                'multiple': 'multiple'
+            })
         }
 
     def clean_title(self):
