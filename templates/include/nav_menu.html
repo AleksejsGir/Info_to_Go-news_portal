@@ -1,7 +1,17 @@
-<ul class="navbar-nav">
+<!-- templates/include/nav_menu.html -->
+<ul class="navbar-nav me-auto">
     {% for item in menu %}
         <li class="nav-item">
-            <a class="nav-link" href="{% url item.url_name %}">{{ item.title }}</a>
+            <a class="nav-link" href="{% url item.url_name %}">
+                {% if item.title == 'Главная' %}
+                    <i class="bi bi-house-door me-1"></i>
+                {% elif item.title == 'О проекте' %}
+                    <i class="bi bi-info-circle me-1"></i>
+                {% elif item.title == 'Каталог' %}
+                    <i class="bi bi-grid me-1"></i>
+                {% endif %}
+                {{ item.title }}
+            </a>
         </li>
         {% if not forloop.last %}
             <li class="nav-item"><hr class="dropdown-divider"/></li>
@@ -9,12 +19,19 @@
     {% endfor %}
 
     <!-- Разделитель перед пунктом "Избранное" -->
-    #<li class="nav-item"><hr class="dropdown-divider"/></li>
+    <li class="nav-item"><hr class="dropdown-divider"/></li>
 
     <!-- Пункт "Избранное" -->
     <li class="nav-item">
-        <a class="nav-link" href="{% url 'news:favorite_news' %}">
-            <i class="bi bi-bookmark"></i> Избранное
+        <a class="nav-link {% if is_favorites_page %}active{% endif %}" href="{% url 'news:favorite_news' %}">
+            <i class="bi bi-bookmark me-1"></i> Избранное
+        </a>
+    </li>
+
+    <!-- Добавляем пункт "Добавить статью" -->
+    <li class="nav-item">
+        <a class="nav-link" href="{% url 'news:add_article' %}">
+            <i class="bi bi-plus-circle me-1"></i> Добавить статью
         </a>
     </li>
 </ul>

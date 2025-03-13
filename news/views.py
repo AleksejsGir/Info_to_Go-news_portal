@@ -181,7 +181,7 @@ def get_favorite_news(request):
     )
 
     # Добавляем пагинацию - 9 новостей на странице
-    paginator = Paginator(articles, 9)
+    paginator = Paginator(articles, 8)
     page = request.GET.get('page')
 
     try:
@@ -245,7 +245,7 @@ def get_news_by_category(request, category_id):
     articles = Article.objects.select_related('category').prefetch_related('tags').filter(category=category)
 
     # Добавляем пагинацию - 9 новостей на странице
-    paginator = Paginator(articles, 9)
+    paginator = Paginator(articles, 8)
     page = request.GET.get('page')
 
     try:
@@ -279,7 +279,7 @@ def get_news_by_tag(request, tag_id):
     articles = Article.objects.select_related('category').prefetch_related('tags').filter(tags=tag)
 
     # Добавляем пагинацию - 9 новостей на странице
-    paginator = Paginator(articles, 9)
+    paginator = Paginator(articles, 8)
     page = request.GET.get('page')
 
     try:
@@ -334,7 +334,7 @@ def get_all_news(request):
     articles = Article.objects.select_related('category').prefetch_related('tags').order_by(order_by)
 
     # Добавляем пагинацию - 9 новостей на странице
-    paginator = Paginator(articles, 9)
+    paginator = Paginator(articles, 8)
     page = request.GET.get('page')
 
     try:
@@ -441,7 +441,7 @@ def search_news(request):
         Q(title__icontains=query) | Q(content__icontains=query)
     )
 
-    paginator = Paginator(articles, 12)
+    paginator = Paginator(articles, 8)
     page = request.GET.get('page')
 
     try:
