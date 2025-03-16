@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+
+{% block title %}Загрузка новостей из JSON{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Загрузка новостей из JSON-файла</h1>
+
+    <div class="row">
+        <div class="col-md-6">
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+
+                <div class="mb-3">
+                    {{ form.json_file.label_tag }}
+                    {{ form.json_file }}
+                    {% if form.json_file.errors %}
+                        <div class="text-danger">
+                            {{ form.json_file.errors }}
+                        </div>
+                    {% endif %}
+                </div>
+
+                {% if validation_results %}
+                    <!-- Если есть новые категории или теги, покажем предупреждение -->
+                    {% if validation_results.new_categories or validation_results.new_tags %}
+                        <div class="alert alert-warning" role="alert">
+                            <h5 class="alert-heading">Внимание!</h5>
+                            <p>В JSON-файле найдены новые категории и/или теги, которых нет в базе данных.</p>
+
+                            {% if validation_results.new_categories %}
+                                <h6>Новые категории:</h6>
+                                <ul>
+                                    {% for category in validation_results.new_categories %}
+                                        <li>{{ category }}</li>
+                                    {% endfor %}
+                                </ul>
+                            {% endif %}
+
+                            {% if validation_results.new_tags %}
+                                <h6>Новые теги:</h6>
+                                <ul>
+                                    {% for tag in validation_results.new_tags %}
+                                        <li>{{ tag }}</li>
+                                    {% endfor %}
+                                </ul>
+                            {% endif %}
+
+                            <hr>
+                            <p>Чтобы продолжить и создать эти категории и теги, подтвердите действие:</p>
+                            <input type="hidden" name="confirm" value="1">
+                        </div>
+                    {% endif %}
+                {% endif %}
+
+                <div class="d-grid">
+                    <button type="submit" class="btn btn-primary">
+                        {% if validation_results.new_categories or validation_results.new_tags %}
+                            Подтвердить и продолжить
+                        {% else %}
+                            Загрузить новости
+                        {% endif %}
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Инструкция</h5>
+                </div>
+                <div class="card-body">
+                    <p>Загрузите JSON-файл со списком новостей. Файл должен содержать массив объектов со следующей структурой:</p>
+                    <pre><code>[
+  {
+    "title": "Заголовок новости",
+    "content": "Содержание новости",
+    "category": "Имя категории",
+    "tags": ["Тег1", "Тег2", "Тег3"]
+  },
+  {...}
+]</code></pre>
+                    <p>Обязательные поля:</p>
+                    <ul>
+                        <li><strong>title</strong> - заголовок новости</li>
+                        <li><strong>content</strong> - содержание новости</li>
+                    </ul>
+                    <p>Необязательные поля:</p>
+                    <ul>
+                        <li><strong>category</strong> - название категории (если не указана, будет использована первая доступная)</li>
+                        <li><strong>tags</strong> - массив тегов</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

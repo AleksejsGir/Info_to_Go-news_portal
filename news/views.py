@@ -8,6 +8,10 @@ from django.views.decorators.csrf import csrf_protect
 from .models import Article, Tag, Category, Like, Favorite  # Добавляем импорт модели Like
 
 from .forms import ArticleForm
+
+from django.contrib import messages
+from .forms import ArticleUploadForm
+
 """
 Информация в шаблоны будет браться из базы данных
 Но пока, мы сделаем переменные, куда будем записывать информацию, которая пойдет в 
@@ -91,8 +95,6 @@ def toggle_like(request, article_id):
         # Логируем возможные ошибки
         print(f"Ошибка при обработке лайка: {e}")
         return JsonResponse({'error': 'Произошла ошибка'}, status=400)
-
-
 
 
 @csrf_protect  # Защита от межсайтовой подделки запросов
@@ -194,11 +196,11 @@ def get_favorite_news(request):
         paginated_news = paginator.page(paginator.num_pages)
 
     context = {**info,
-            'news': paginated_news,
-            'news_count': len(articles),
-            'categories_list': get_categories_with_count(),
-            'is_favorites_page': True,
-            }
+               'news': paginated_news,
+               'news_count': len(articles),
+               'categories_list': get_categories_with_count(),
+               'is_favorites_page': True,
+               }
 
     return render(request, 'news/favorites.html', context=context)
 
@@ -541,3 +543,258 @@ def article_delete(request, article_id):
         'categories_list': get_categories_with_count(),
     }
     return render(request, 'news/delete_article.html', context)
+
+
+def upload_json_view(request):
+    """
+    Представление для загрузки JSON-файла с новостями
+
+    Логика:
+    1. Если GET-запрос - отображаем форму
+    2. Если POST-запрос - обрабатываем форму:
+       - Валидируем JSON-файл
+       - Если есть новые категории/теги, показываем предупреждение
+       - Если пользователь подтверждает создание новых категорий/тегов,
+         сохраняем JSON-данные в сессии и перенаправляем на редактирование
+    """
+    if request.method == 'POST':
+        form = ArticleUploadForm(request.POST, request.FILES)
+
+        if form.is_valid():
+            # Получаем данные, которые мы сохранили в форме
+            json_data = form.json_data
+            validation_results = form.validation_results
+
+            # Сохраняем список статей с проблемами в сессии
+            if hasattr(form, 'articles_with_issues'):
+                request.session['articles_with_issues'] = form.articles_with_issues
+
+            # Проверяем, есть ли новые категории или теги
+            has_new_items = validation_results['new_categories'] or validation_results['new_tags']
+
+            # Если есть новые элементы и пользователь не подтвердил их создание,
+            # показываем предупреждение
+            if has_new_items and 'confirm' not in request.POST:
+                context = {
+                    **info,
+                    'form': form,
+                    'validation_results': validation_results,
+                    'categories_list': get_categories_with_count(),
+                }
+                return render(request, 'news/upload_json.html', context)
+
+            # Если пользователь подтвердил или нет новых элементов, сохраняем данные в сессии
+
+            # Создаем новые категории, если есть
+            for category_name in validation_results['new_categories']:
+                Category.objects.get_or_create(name=category_name)
+
+            # Создаем новые теги, если есть
+            for tag_name in validation_results['new_tags']:
+                Tag.objects.get_or_create(name=tag_name)
+
+            # Сохраняем данные в сессии для потокового редактирования
+            request.session['json_articles'] = json_data
+            request.session['current_article_index'] = 0
+            request.session['total_articles'] = len(json_data)
+
+            # Перенаправляем на редактирование первой статьи
+            return redirect('news:edit_article_from_json')
+
+    else:
+        form = ArticleUploadForm()
+
+    context = {
+        **info,
+        'form': form,
+        'categories_list': get_categories_with_count(),
+    }
+
+    return render(request, 'news/upload_json.html', context)
+
+
+def edit_article_from_json(request):
+    """
+    Позволяет редактировать статьи из JSON, включая исправление отсутствующих обязательных полей
+    """
+    # Проверяем, есть ли данные в сессии
+    if 'json_articles' not in request.session:
+        messages.error(request, 'Сначала загрузите JSON-файл с новостями')
+        return redirect('news:upload_json')
+
+    # Получаем данные из сессии
+    json_articles = request.session['json_articles']
+    current_index = request.session['current_article_index']
+    total_articles = request.session['total_articles']
+
+    # Получаем список проблем, если он доступен
+    articles_with_issues = request.session.get('articles_with_issues', [])
+
+    # Проверяем, не закончили ли мы
+    if current_index >= total_articles:
+        messages.success(request, 'Все статьи отредактированы')
+        return redirect('news:save_articles_from_json')
+
+    # Получаем текущую статью
+    current_article = json_articles[current_index]
+
+    # Проверяем, есть ли у текущей статьи проблемы
+    current_article_issues = None
+    for article_issue in articles_with_issues:
+        if article_issue['index'] == current_index:
+            current_article_issues = article_issue['missing_fields']
+            break
+
+    if request.method == 'POST':
+        # Обрабатываем отправку формы
+
+        # Обновляем данные статьи в сессии
+        current_article['title'] = request.POST.get('title', '')
+        current_article['content'] = request.POST.get('content', '')
+        current_article['category'] = request.POST.get('category', '')
+
+        # Обрабатываем теги
+        selected_tags = []
+        for tag in Tag.objects.all():
+            if f'tag_{tag.id}' in request.POST:
+                selected_tags.append(tag.name)
+        current_article['tags'] = selected_tags
+
+        # Обновляем сессию
+        json_articles[current_index] = current_article
+        request.session['json_articles'] = json_articles
+
+        # Если у этой статьи были проблемы, проверяем, исправлены ли они
+        if current_article_issues:
+            still_missing = []
+            if not current_article['title']:
+                still_missing.append('title')
+            if not current_article['content']:
+                still_missing.append('content')
+
+            # Если проблемы исправлены, обновляем список статей с проблемами
+            if not still_missing:
+                # Удаляем эту статью из списка проблем
+                request.session['articles_with_issues'] = [
+                    issue for issue in articles_with_issues
+                    if issue['index'] != current_index
+                ]
+            elif still_missing != current_article_issues:
+                # Обновляем отсутствующие поля
+                for issue in articles_with_issues:
+                    if issue['index'] == current_index:
+                        issue['missing_fields'] = still_missing
+                        break
+                request.session['articles_with_issues'] = articles_with_issues
+
+        # Обрабатываем кнопки навигации
+        if 'next_article' in request.POST:
+            request.session['current_article_index'] = current_index + 1
+            return redirect('news:edit_article_from_json')
+        elif 'save_all' in request.POST:
+            return redirect('news:save_articles_from_json')
+
+    # Получаем категорию и теги для формы
+    category_name = current_article.get('category', '')
+    category = Category.objects.filter(name__iexact=category_name).first()
+    article_tags = current_article.get('tags', [])
+
+    context = {
+        **info,
+        'article': current_article,
+        'current_index': current_index,
+        'total_articles': total_articles,
+        'categories': Category.objects.all(),
+        'tags': Tag.objects.all(),
+        'selected_category': category,
+        'selected_tags': article_tags,
+        'categories_list': get_categories_with_count(),
+        'missing_fields': current_article_issues
+    }
+
+    return render(request, 'news/edit_article_from_json.html', context)
+
+
+def save_articles_from_json(request):
+    """
+    Представление для сохранения всех отредактированных статей из JSON
+
+    Логика:
+    1. Получаем данные из сессии
+    2. Сохраняем каждую статью в базу данных
+    3. Очищаем сессию
+    4. Перенаправляем на страницу каталога
+    """
+    if 'json_articles' not in request.session:
+        messages.error(request, 'Нет данных для сохранения')
+        return redirect('news:catalog')
+
+    # Проверяем, есть ли нерешенные проблемы
+    articles_with_issues = request.session.get('articles_with_issues', [])
+    if articles_with_issues:
+        # Перенаправляем на первую статью с проблемами
+        first_issue_index = articles_with_issues[0]['index']
+        request.session['current_article_index'] = first_issue_index
+        messages.error(request, 'Есть статьи с незаполненными обязательными полями')
+        return redirect('news:edit_article_from_json')
+
+    # Получаем данные из сессии
+    json_articles = request.session['json_articles']
+
+    # Сохраняем статьи
+    saved_articles = 0
+
+    for article_data in json_articles:
+        try:
+            # Пропускаем статьи с отсутствующими обязательными полями
+            if not article_data.get('title') or not article_data.get('content'):
+                continue
+
+            # Создаем новую статью
+            article = Article(
+                title=article_data['title'],
+                content=article_data['content'],
+                views=0,
+                status=Article.Status.UNCHECKED
+            )
+
+            # Добавляем категорию
+            category_name = article_data.get('category', '')
+            if category_name:
+                category = Category.objects.filter(name__iexact=category_name).first()
+                if category:
+                    article.category = category
+                else:
+                    article.category = Category.objects.first()
+            else:
+                article.category = Category.objects.first()
+
+            # Сохраняем статью
+            article.save()
+
+            # Добавляем теги
+            for tag_name in article_data.get('tags', []):
+                tag = Tag.objects.filter(name__iexact=tag_name).first()
+                if tag:
+                    article.tags.add(tag)
+
+            saved_articles += 1
+
+        except Exception as e:
+            # Если что-то пошло не так, логируем ошибку
+            print(f"Ошибка при сохранении статьи: {e}")
+            continue
+
+    # Очищаем сессию
+    if 'json_articles' in request.session:
+        del request.session['json_articles']
+    if 'current_article_index' in request.session:
+        del request.session['current_article_index']
+    if 'total_articles' in request.session:
+        del request.session['total_articles']
+    if 'articles_with_issues' in request.session:
+        del request.session['articles_with_issues']
+
+    # Отображаем сообщение об успешном импорте
+    messages.success(request, f'Успешно сохранено {saved_articles} статей')
+    return redirect('news:catalog')

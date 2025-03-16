@@ -24,4 +24,9 @@ urlpatterns = [
     # Новые маршруты для редактирования и удаления статей
     path('edit/<int:article_id>/', views.article_update, name='article_update'),
     path('delete/<int:article_id>/', views.article_delete, name='article_delete'),
+
+    # Маршруты для загрузки JSON
+    path('upload_json/', views.upload_json_view, name='upload_json'),
+    path('edit_json_article/', views.edit_article_from_json, name='edit_article_from_json'),
+    path('save_json_articles/', views.save_articles_from_json, name='save_articles_from_json'),
 ]
