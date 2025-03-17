@@ -1,16 +1,20 @@
+# news/views.py
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.db.models import Count, Q
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_protect
+from django.utils.decorators import method_decorator
+from django.views.generic import (
+    ListView, DetailView, TemplateView, View,
+    FormView, CreateView, UpdateView, DeleteView
+)
+from django.urls import reverse_lazy
 
-from .models import Article, Tag, Category, Like, Favorite  # Добавляем импорт модели Like
-
-from .forms import ArticleForm
-
+from .models import Article, Tag, Category, Like, Favorite
+from .forms import ArticleForm, ArticleUploadForm
 from django.contrib import messages
-from .forms import ArticleUploadForm
 
 """
 Информация в шаблоны будет браться из базы данных
@@ -35,174 +39,27 @@ info = {
 }
 
 
-@csrf_protect  # Защита от межсайтовой подделки запросов
-@require_POST  # Разрешаем только POST-запросы
-def toggle_like(request, article_id):
-    """
-                    05.03.2025
-    Обработчик для добавления/удаления лайка
-
-    Логика:
-    1. Получаем статью по ID
-    2. Определяем IP-адрес пользователя
-    3. Проверяем существование лайка
-    4. Добавляем или удаляем лайк
-    5. Возвращаем JSON с результатом
-    """
-    try:
-        # Получаем статью или возвращаем 404
-        article = get_object_or_404(Article, id=article_id)
-
-        # Получаем IP-адрес клиента
-        ip_address = request.META.get('REMOTE_ADDR')
-
-        # Проверяем существование лайка
-        like, created = Like.objects.get_or_create(
-            article=article,
-            ip_address=ip_address
-        )
-
-        # Инициализируем список лайкнутых статей, если его нет
-        if 'liked_articles' not in request.session:
-            request.session['liked_articles'] = []
-
-        # Если лайк уже существует - удаляем
-        if not created:
-            like.delete()
-            liked = False
-
-            # Удаляем из сессии, если статья была в списке лайкнутых
-            if article.id in request.session['liked_articles']:
-                request.session['liked_articles'].remove(article.id)
-                request.session.modified = True
-        else:
-            liked = True
-
-            # Добавляем в сессию, если статьи не было в списке лайкнутых
-            if article.id not in request.session['liked_articles']:
-                request.session['liked_articles'].append(article.id)
-                request.session.modified = True
-
-        # Получаем актуальное количество лайков
-        likes_count = article.likes.count()
-
-        return JsonResponse({
-            'liked': liked,
-            'likes_count': likes_count
+# Создаем миксин для добавления навигационного меню во все представления
+class MenuMixin:
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update({
+            "users_count": 5,
+            "news_count": 10,
+            "menu": [
+                {"title": "Главная",
+                 "url": "/",
+                 "url_name": "index"},
+                {"title": "О проекте",
+                 "url": "/about/",
+                 "url_name": "about"},
+                {"title": "Каталог",
+                 "url": "/news/catalog/",
+                 "url_name": "news:catalog"},  # Обновлено для использования пространства имён
+            ],
+            'categories_list': get_categories_with_count(),
         })
-
-    except Exception as e:
-        # Логируем возможные ошибки
-        print(f"Ошибка при обработке лайка: {e}")
-        return JsonResponse({'error': 'Произошла ошибка'}, status=400)
-
-
-@csrf_protect  # Защита от межсайтовой подделки запросов
-@require_POST  # Разрешаем только POST-запросы
-def toggle_favorite(request, article_id):
-    """
-                    06.03.2025
-    Обработчик для добавления/удаления статьи из избранного
-
-    Логика:
-    1. Получаем статью по ID
-    2. Определяем IP-адрес пользователя
-    3. Проверяем существование статьи в избранном
-    4. Добавляем или удаляем из избранного
-    5. Возвращаем JSON с результатом
-    """
-    try:
-        # Получаем статью или возвращаем 404
-        article = get_object_or_404(Article, id=article_id)
-
-        # Получаем IP-адрес клиента
-        ip_address = request.META.get('REMOTE_ADDR')
-
-        # Проверяем существование в избранном
-        favorite, created = Favorite.objects.get_or_create(
-            article=article,
-            ip_address=ip_address
-        )
-
-        # Инициализируем список избранных статей, если его нет
-        if 'favorite_articles' not in request.session:
-            request.session['favorite_articles'] = []
-
-        # Если статья уже в избранном - удаляем
-        if not created:
-            favorite.delete()
-            is_favorite = False
-
-            # Удаляем из сессии, если статья была в списке избранных
-            if article.id in request.session['favorite_articles']:
-                request.session['favorite_articles'].remove(article.id)
-                request.session.modified = True
-        else:
-            is_favorite = True
-
-            # Добавляем в сессию, если статьи не было в списке избранных
-            if article.id not in request.session['favorite_articles']:
-                request.session['favorite_articles'].append(article.id)
-                request.session.modified = True
-
-        # Получаем актуальное количество добавлений в избранное
-        favorites_count = article.favorites.count()
-
-        return JsonResponse({
-            'is_favorite': is_favorite,
-            'favorites_count': favorites_count
-        })
-
-    except Exception as e:
-        # Логируем возможные ошибки
-        print(f"Ошибка при обработке добавления в избранное: {e}")
-        return JsonResponse({'error': 'Произошла ошибка'}, status=400)
-
-
-def get_favorite_news(request):
-    """
-                    06.03.2025
-    Представление для отображения избранных новостей пользователя
-
-    Логика:
-    1. Получаем IP-адрес пользователя
-    2. Фильтруем избранные статьи по IP
-    3. Возвращаем страницу с избранными статьями
-    """
-    # Получаем IP-адрес клиента
-    ip_address = request.META.get('REMOTE_ADDR')
-
-    # Получаем ID избранных статей
-    favorite_articles = Favorite.objects.filter(
-        ip_address=ip_address
-    ).values_list('article_id', flat=True)
-
-    # Получаем сами статьи
-    articles = Article.objects.select_related('category').prefetch_related('tags').filter(
-        id__in=favorite_articles
-    )
-
-    # Добавляем пагинацию - 9 новостей на странице
-    paginator = Paginator(articles, 8)
-    page = request.GET.get('page')
-
-    try:
-        paginated_news = paginator.page(page)
-    except PageNotAnInteger:
-        # Если параметр page не является числом, выводим первую страницу
-        paginated_news = paginator.page(1)
-    except EmptyPage:
-        # Если страница выходит за пределы доступных, выводим последнюю
-        paginated_news = paginator.page(paginator.num_pages)
-
-    context = {**info,
-               'news': paginated_news,
-               'news_count': len(articles),
-               'categories_list': get_categories_with_count(),
-               'is_favorites_page': True,
-               }
-
-    return render(request, 'news/favorites.html', context=context)
+        return context
 
 
 # Функция для получения данных о категориях с подсчетом новостей
@@ -210,25 +67,377 @@ def get_categories_with_count():
     return Category.objects.annotate(news_count=Count('article')).order_by('name')
 
 
-def main(request):
-    """
-    Представление рендерит шаблон main.html
-    """
-    # Используем синтаксис, с распаковкой словаря
-    context = {**info, 'categories_list': get_categories_with_count()}
-    return render(request, 'main.html', context=context)
+# 1. Переписать about на TemplateView
+class AboutView(MenuMixin, TemplateView):
+    template_name = 'about.html'
 
 
-def about(request):
-    """Представление рендерит шаблон about.html"""
-    context = {**info, 'categories_list': get_categories_with_count()}
-    return render(request, 'about.html', context=context)
+# Также добавим представление для главной страницы
+class MainView(MenuMixin, TemplateView):
+    template_name = 'main.html'
 
 
+# Представление для отображения всех новостей (каталог)
+class CatalogListView(MenuMixin, ListView):
+    template_name = 'news/catalog.html'
+    context_object_name = 'news'
+    paginate_by = 8
+
+    def get_queryset(self):
+        # Считаем параметры из GET-запроса
+        sort = self.request.GET.get('sort', 'publication_date')  # по умолчанию сортируем по дате загрузки
+        order = self.request.GET.get('order', 'desc')  # по умолчанию сортируем по убыванию
+
+        # Проверяем дали ли мы разрешение на сортировку по этому полю
+        valid_sort_fields = {'publication_date', 'views'}
+        if sort not in valid_sort_fields:
+            sort = 'publication_date'
+
+        # Обрабатываем направление сортировки
+        if order == 'asc':
+            order_by = sort
+        else:
+            order_by = f'-{sort}'
+
+        return Article.objects.select_related('category').prefetch_related('tags').order_by(order_by)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['news_count'] = self.get_queryset().count()
+        return context
+
+
+# 2. Переписать get_news_by_category на ListView
+class CategoryNewsListView(MenuMixin, ListView):
+    template_name = 'news/catalog.html'
+    context_object_name = 'news'
+    paginate_by = 8
+
+    def get_queryset(self):
+        self.category = get_object_or_404(Category, id=self.kwargs['category_id'])
+        return Article.objects.select_related('category').prefetch_related('tags').filter(category=self.category)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['current_category'] = self.category
+        context['news_count'] = self.get_queryset().count()
+        return context
+
+
+# 3. Переписать get_news_by_tag на ListView
+class TagNewsListView(MenuMixin, ListView):
+    template_name = 'news/catalog.html'
+    context_object_name = 'news'
+    paginate_by = 8
+
+    def get_queryset(self):
+        self.tag = get_object_or_404(Tag, id=self.kwargs['tag_id'])
+        return Article.objects.select_related('category').prefetch_related('tags').filter(tags=self.tag)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['current_tag'] = self.tag
+        context['news_count'] = self.get_queryset().count()
+        return context
+
+
+# 4. Переписать toggle_favorite на View
+class ToggleFavoriteView(View):
+    @method_decorator(csrf_protect)
+    def post(self, request, article_id):
+        try:
+            # Получаем статью или возвращаем 404
+            article = get_object_or_404(Article, id=article_id)
+
+            # Получаем IP-адрес клиента
+            ip_address = request.META.get('REMOTE_ADDR')
+
+            # Проверяем существование в избранном
+            favorite, created = Favorite.objects.get_or_create(
+                article=article,
+                ip_address=ip_address
+            )
+
+            # Инициализируем список избранных статей, если его нет
+            if 'favorite_articles' not in request.session:
+                request.session['favorite_articles'] = []
+
+            # Если статья уже в избранном - удаляем
+            if not created:
+                favorite.delete()
+                is_favorite = False
+                # Удаляем из сессии
+                if article.id in request.session['favorite_articles']:
+                    request.session['favorite_articles'].remove(article.id)
+                    request.session.modified = True
+            else:
+                is_favorite = True
+                # Добавляем в сессию
+                if article.id not in request.session['favorite_articles']:
+                    request.session['favorite_articles'].append(article.id)
+                    request.session.modified = True
+
+            # Получаем актуальное количество добавлений в избранное
+            favorites_count = article.favorites.count()
+
+            return JsonResponse({
+                'is_favorite': is_favorite,
+                'favorites_count': favorites_count
+            })
+
+        except Exception as e:
+            # Логируем возможные ошибки
+            print(f"Ошибка при обработке добавления в избранное: {e}")
+            return JsonResponse({'error': 'Произошла ошибка'}, status=400)
+
+
+# 5. Переписать toggle_like на View
+class ToggleLikeView(View):
+    @method_decorator(csrf_protect)
+    def post(self, request, article_id):
+        try:
+            # Получаем статью или возвращаем 404
+            article = get_object_or_404(Article, id=article_id)
+
+            # Получаем IP-адрес клиента
+            ip_address = request.META.get('REMOTE_ADDR')
+
+            # Проверяем существование лайка
+            like, created = Like.objects.get_or_create(
+                article=article,
+                ip_address=ip_address
+            )
+
+            # Инициализируем список лайкнутых статей, если его нет
+            if 'liked_articles' not in request.session:
+                request.session['liked_articles'] = []
+
+            # Если лайк уже существует - удаляем
+            if not created:
+                like.delete()
+                liked = False
+
+                # Удаляем из сессии, если статья была в списке лайкнутых
+                if article.id in request.session['liked_articles']:
+                    request.session['liked_articles'].remove(article.id)
+                    request.session.modified = True
+            else:
+                liked = True
+
+                # Добавляем в сессию, если статьи не было в списке лайкнутых
+                if article.id not in request.session['liked_articles']:
+                    request.session['liked_articles'].append(article.id)
+                    request.session.modified = True
+
+            # Получаем актуальное количество лайков
+            likes_count = article.likes.count()
+
+            return JsonResponse({
+                'liked': liked,
+                'likes_count': likes_count
+            })
+
+        except Exception as e:
+            # Логируем возможные ошибки
+            print(f"Ошибка при обработке лайка: {e}")
+            return JsonResponse({'error': 'Произошла ошибка'}, status=400)
+
+
+# 6. Переписать upload_json_view на FormView
+class UploadJsonView(MenuMixin, FormView):
+    template_name = 'news/upload_json.html'
+    form_class = ArticleUploadForm
+    success_url = reverse_lazy('news:edit_article_from_json')
+
+    def form_valid(self, form):
+        # Получаем данные, которые мы сохранили в форме
+        json_data = form.json_data
+        validation_results = form.validation_results
+
+        # Сохраняем список статей с проблемами в сессии
+        if hasattr(form, 'articles_with_issues'):
+            self.request.session['articles_with_issues'] = form.articles_with_issues
+
+        # Проверяем, есть ли новые категории или теги
+        has_new_items = validation_results['new_categories'] or validation_results['new_tags']
+
+        # Если есть новые элементы и пользователь не подтвердил их создание,
+        # показываем предупреждение
+        if has_new_items and 'confirm' not in self.request.POST:
+            return self.render_to_response(self.get_context_data(
+                form=form,
+                validation_results=validation_results
+            ))
+
+        # Создаем новые категории, если есть
+        for category_name in validation_results['new_categories']:
+            Category.objects.get_or_create(name=category_name)
+
+        # Создаем новые теги, если есть
+        for tag_name in validation_results['new_tags']:
+            Tag.objects.get_or_create(name=tag_name)
+
+        # Сохраняем данные в сессии для потокового редактирования
+        self.request.session['json_articles'] = json_data
+        self.request.session['current_article_index'] = 0
+        self.request.session['total_articles'] = len(json_data)
+
+        return super().form_valid(form)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        if 'validation_results' in kwargs:
+            context['validation_results'] = kwargs['validation_results']
+        return context
+
+
+# 7. Переписать search_news на ListView
+class SearchNewsView(MenuMixin, ListView):
+    template_name = 'news/search_results.html'
+    context_object_name = 'news'
+    paginate_by = 8
+
+    def get_queryset(self):
+        query = self.request.GET.get('q', '')
+        if not query:
+            return Article.objects.none()
+
+        # Создаем сложный запрос с использованием Q для поиска по заголовку и содержанию
+        return Article.objects.select_related('category').prefetch_related('tags').filter(
+            Q(title__icontains=query) | Q(content__icontains=query)
+        )
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['query'] = self.request.GET.get('q', '')
+        context['news_count'] = self.get_queryset().count()
+        return context
+
+
+# 8. Переписать favorites на ListView
+class FavoriteNewsListView(MenuMixin, ListView):
+    template_name = 'news/favorites.html'
+    context_object_name = 'news'
+    paginate_by = 8
+
+    def get_queryset(self):
+        # Получаем IP-адрес клиента
+        ip_address = self.request.META.get('REMOTE_ADDR')
+
+        # Получаем ID избранных статей
+        favorite_articles = Favorite.objects.filter(
+            ip_address=ip_address
+        ).values_list('article_id', flat=True)
+
+        # Получаем сами статьи
+        return Article.objects.select_related('category').prefetch_related('tags').filter(
+            id__in=favorite_articles
+        )
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['news_count'] = self.get_queryset().count()
+        context['is_favorites_page'] = True
+        return context
+
+
+# 9. Переписать get_detail_article_by_slag на DetailView
+class ArticleDetailBySlugView(MenuMixin, DetailView):
+    model = Article
+    template_name = 'news/article_detail.html'
+    context_object_name = 'article'
+    slug_url_kwarg = 'title'  # Используем 'title' как аргумент URL для slug
+
+    def get(self, request, *args, **kwargs):
+        response = super().get(request, *args, **kwargs)
+        # Увеличиваем количество просмотров
+        article = self.get_object()
+        article.views += 1
+        article.save()
+
+        return response
+
+
+# Представление для детальной страницы статьи по ID
+class ArticleDetailView(MenuMixin, DetailView):
+    model = Article
+    template_name = 'news/article_detail.html'
+    context_object_name = 'article'
+    pk_url_kwarg = 'article_id'
+
+    def get(self, request, *args, **kwargs):
+        response = super().get(request, *args, **kwargs)
+        # Увеличиваем количество просмотров
+        article = self.get_object()
+        article.views += 1
+        article.save()
+
+        # Получаем IP-адрес клиента
+        ip_address = request.META.get('REMOTE_ADDR')
+
+        # Проверяем, лайкнул ли текущий IP эту статью
+        is_liked = Like.objects.filter(article=article, ip_address=ip_address).exists()
+
+        # Инициализируем список лайкнутых статей в сессии, если его нет
+        if 'liked_articles' not in request.session:
+            request.session['liked_articles'] = []
+
+        # Обновляем список лайкнутых статей в сессии
+        liked_articles = request.session['liked_articles']
+        if is_liked and article.id not in liked_articles:
+            liked_articles.append(article.id)
+            request.session['liked_articles'] = liked_articles
+            request.session.modified = True
+        elif not is_liked and article.id in liked_articles:
+            liked_articles.remove(article.id)
+            request.session['liked_articles'] = liked_articles
+            request.session.modified = True
+
+        return response
+
+
+# 10. Переписать add_article на CreateView
+class ArticleCreateView(MenuMixin, CreateView):
+    model = Article
+    form_class = ArticleForm
+    template_name = 'news/add_article.html'
+
+    def form_valid(self, form):
+        # Извлекаем валидированные данные из формы
+        article = form.save(commit=False)
+        article.views = 0
+        article.status = Article.Status.UNCHECKED
+        article.save()
+        form.save_m2m()  # Сохраняем теги (many-to-many отношения)
+
+        return redirect('news:detail_article_by_id', article_id=article.id)
+
+
+# 11. Переписать article_update на UpdateView
+class ArticleUpdateView(MenuMixin, UpdateView):
+    model = Article
+    form_class = ArticleForm
+    template_name = 'news/edit_article.html'
+    pk_url_kwarg = 'article_id'  # URL-параметр, содержащий ID статьи
+
+    def get_success_url(self):
+        return reverse_lazy('news:detail_article_by_id', kwargs={'article_id': self.object.id})
+
+
+# 12. Переписать article_delete на DeleteView
+class ArticleDeleteView(MenuMixin, DeleteView):
+    model = Article
+    template_name = 'news/delete_article.html'
+    success_url = reverse_lazy('news:catalog')
+    pk_url_kwarg = 'article_id'  # URL-параметр, содержащий ID статьи
+
+
+# Оставляем функцию catalog без изменений, так как она будет заменена CatalogListView
 def catalog(request):
     return HttpResponse('Каталог новостей')
 
 
+# Оставляем функцию get_categories без изменений, так как она может использоваться где-то еще
 def get_categories(request):
     """
     Возвращает все категории для представления в каталоге
@@ -236,383 +445,11 @@ def get_categories(request):
     return HttpResponse('All categories')
 
 
-def get_news_by_category(request, category_id):
-    """
-    Возвращает новости по категории для представления в каталоге
-    """
-    # Получаем категорию по ID
-    category = get_object_or_404(Category, id=category_id)
-
-    # Фильтруем статьи по категории
-    articles = Article.objects.select_related('category').prefetch_related('tags').filter(category=category)
-
-    # Добавляем пагинацию - 9 новостей на странице
-    paginator = Paginator(articles, 8)
-    page = request.GET.get('page')
-
-    try:
-        paginated_news = paginator.page(page)
-    except PageNotAnInteger:
-        # Если параметр page не является числом, выводим первую страницу
-        paginated_news = paginator.page(1)
-    except EmptyPage:
-        # Если страница выходит за пределы доступных, выводим последнюю
-        paginated_news = paginator.page(paginator.num_pages)
-
-    # Используем синтаксис для создания контекста
-    context = {**info,
-               'news': paginated_news,
-               'news_count': len(articles),  # len() вместо count()
-               'current_category': category,
-               'categories_list': get_categories_with_count(),
-               }
-
-    return render(request, 'news/catalog.html', context=context)
-
-
-def get_news_by_tag(request, tag_id):
-    """
-    Возвращает новости по тегу для представления в каталоге
-    """
-    # Получаем тег по ID
-    tag = get_object_or_404(Tag, id=tag_id)
-
-    # Фильтруем статьи по тегу
-    articles = Article.objects.select_related('category').prefetch_related('tags').filter(tags=tag)
-
-    # Добавляем пагинацию - 9 новостей на странице
-    paginator = Paginator(articles, 8)
-    page = request.GET.get('page')
-
-    try:
-        paginated_news = paginator.page(page)
-    except PageNotAnInteger:
-        # Если параметр page не является числом, выводим первую страницу
-        paginated_news = paginator.page(1)
-    except EmptyPage:
-        # Если страница выходит за пределы доступных, выводим последнюю
-        paginated_news = paginator.page(paginator.num_pages)
-
-    # Используем синтаксис для создания контекста
-    context = {**info,
-               'news': paginated_news,
-               'news_count': len(articles),
-               'current_tag': tag,
-               'categories_list': get_categories_with_count(),
-               }
-
-    return render(request, 'news/catalog.html', context=context)
-
-
 def get_category_by_name(request, slug):
     return HttpResponse(f"Категория {slug}")
 
 
-def get_all_news(request):
-    """Функция для отображения страницы "Каталог"
-    будет возвращать рендер шаблона /templates/news/catalog.html
-    - **`sort`** - ключ для указания типа сортировки с возможными значениями: `publication_date`, `views`.
-    - **`order`** - опциональный ключ для указания направления сортировки с возможными значениями: `asc`, `desc`. По умолчанию `desc`.
-    1. Сортировка по дате добавления в убывающем порядке (по умолчанию): `/news/catalog/`
-    2. Сортировка по количеству просмотров в убывающем порядке: `/news/catalog/?sort=views`
-    3. Сортировка по количеству просмотров в возрастающем порядке: `/news/catalog/?sort=views&order=asc`
-    4. Сортировка по дате добавления в возрастающем порядке: `/news/catalog/?sort=publication_date&order=asc`
-    """
-    # считаем параметры из GET-запроса
-    sort = request.GET.get('sort', 'publication_date')  # по умолчанию сортируем по дате загрузки
-    order = request.GET.get('order', 'desc')  # по умолчанию сортируем по убыванию
-
-    # Проверяем дали ли мы разрешение на сортировку по этому полю
-    valid_sort_fields = {'publication_date', 'views'}
-    if sort not in valid_sort_fields:
-        sort = 'publication_date'
-
-    # Обрабатываем направление сортировки
-    if order == 'asc':
-        order_by = sort
-    else:
-        order_by = f'-{sort}'
-
-    articles = Article.objects.select_related('category').prefetch_related('tags').order_by(order_by)
-
-    # Добавляем пагинацию - 9 новостей на странице
-    paginator = Paginator(articles, 8)
-    page = request.GET.get('page')
-
-    try:
-        paginated_news = paginator.page(page)
-    except PageNotAnInteger:
-        # Если параметр page не является числом, выводим первую страницу
-        paginated_news = paginator.page(1)
-    except EmptyPage:
-        # Если страница выходит за пределы доступных, выводим последнюю
-        paginated_news = paginator.page(paginator.num_pages)
-
-    context = {**info,
-               'news': paginated_news,
-               'news_count': len(articles),
-               'categories_list': get_categories_with_count(),
-               }
-
-    return render(request, 'news/catalog.html', context=context)
-
-
-def get_detail_article_by_id(request, article_id):
-    """
-    Возвращает детальную информацию по новости для представления
-    с увеличением счетчика просмотров
-
-    Логика работы:
-    1. Получаем статью по ID
-    2. Увеличиваем количество просмотров на 1
-    3. Сохраняем изменения в базе данных
-    4. Передаем статью в контекст шаблона
-    """
-    # Получаем статью по ID
-    article = get_object_or_404(Article, id=article_id)
-
-    # Увеличиваем количество просмотров
-    article.views += 1
-    article.save()
-
-    # Получаем IP-адрес клиента
-    ip_address = request.META.get('REMOTE_ADDR')
-
-    # Проверяем, лайкнул ли текущий IP эту статью
-    is_liked = Like.objects.filter(article=article, ip_address=ip_address).exists()
-
-    # Инициализируем список лайкнутых статей в сессии, если его нет
-    if 'liked_articles' not in request.session:
-        request.session['liked_articles'] = []
-
-    # Обновляем список лайкнутых статей в сессии
-    liked_articles = request.session['liked_articles']
-    if is_liked and article.id not in liked_articles:
-        liked_articles.append(article.id)
-        request.session['liked_articles'] = liked_articles
-        request.session.modified = True
-    elif not is_liked and article.id in liked_articles:
-        liked_articles.remove(article.id)
-        request.session['liked_articles'] = liked_articles
-        request.session.modified = True
-
-    # Формируем контекст для шаблона
-    context = {**info,
-               'article': article,
-               'categories_list': get_categories_with_count(),
-               }
-
-    return render(request, 'news/article_detail.html', context=context)
-
-
-def get_detail_article_by_title(request, title):
-    """
-    Возвращает детальную информацию по новости для представления
-    """
-    article = get_object_or_404(Article, slug=title)
-    context = {**info,
-               'article': article,
-               'categories_list': get_categories_with_count(),
-               }
-    return render(request, 'news/article_detail.html', context=context)
-
-
-def search_news(request):
-    """
-    Представление для поиска новостей по заголовку и содержанию.
-
-    Параметры:
-    - Принимает GET-запрос с параметром 'q' для поиска
-    - Использует Q-объект для поиска по заголовку и содержанию
-    - Применяет постраничную навигацию (12 новостей на странице)
-    """
-    # Получаем поисковый запрос из GET-параметров
-    query = request.GET.get('q', '')
-
-    # Если запрос пустой, возвращаем пустой список
-    if not query:
-        context = {**info,
-                   'news': [],
-                   'query': query,
-                   'categories_list': get_categories_with_count(),
-                   'news_count': 0}
-        return render(request, 'news/search_results.html', context)
-
-    # Создаем сложный запрос с использованием Q для поиска по заголовку и содержанию
-    articles = Article.objects.select_related('category').prefetch_related('tags').filter(
-        Q(title__icontains=query) | Q(content__icontains=query)
-    )
-
-    paginator = Paginator(articles, 8)
-    page = request.GET.get('page')
-
-    try:
-        paginated_news = paginator.page(page)
-    except PageNotAnInteger:
-        # Если параметр page не является числом, выводим первую страницу
-        paginated_news = paginator.page(1)
-    except EmptyPage:
-        # Если страница выходит за пределы доступных, выводим последнюю
-        paginated_news = paginator.page(paginator.num_pages)
-
-    # Формируем контекст для шаблона
-    context = {**info,
-               'news': paginated_news,
-               'query': query,
-               'news_count': len(articles),
-               'categories_list': get_categories_with_count(),
-               }
-
-    return render(request, 'news/search_results.html', context)
-
-
-def add_article(request):
-    if request.method == 'POST':
-        form = ArticleForm(request.POST)
-        if form.is_valid():
-            # Извлекаем валидированные данные
-            title = form.cleaned_data['title']
-            content = form.cleaned_data['content']
-            category = form.cleaned_data['category']
-            tags = form.cleaned_data['tags']
-
-            # Создаем объект статьи
-            article = Article(
-                title=title,
-                content=content,
-                category=category,
-                views=0,
-                status=Article.Status.UNCHECKED
-            )
-
-            # Сохраняем статью
-            article.save()
-
-            # Добавляем теги к статье
-            article.tags.set(tags)
-
-            return redirect('news:detail_article_by_id', article_id=article.id)
-    else:
-        form = ArticleForm()
-
-    context = {
-        **info,
-        'form': form,
-        'categories_list': get_categories_with_count(),
-    }
-
-    return render(request, 'news/add_article.html', context=context)
-
-
-def article_update(request, article_id):
-    # Получаем статью или возвращаем 404
-    article = get_object_or_404(Article, id=article_id)
-
-    if request.method == 'POST':
-        # Создаем форму с данными из POST-запроса и FILES
-        form = ArticleForm(request.POST, request.FILES, instance=article)
-        if form.is_valid():
-            # Сохраняем изменения
-            form.save()
-            return redirect('news:detail_article_by_id', article_id=article.id)
-    else:
-        # Создаем форму с текущими данными статьи
-        form = ArticleForm(instance=article)
-
-    context = {
-        **info,
-        'form': form,
-        'article': article,
-        'categories_list': get_categories_with_count(),
-    }
-    return render(request, 'news/edit_article.html', context)
-
-
-def article_delete(request, article_id):
-    # Получаем статью или возвращаем 404
-    article = get_object_or_404(Article, id=article_id)
-
-    if request.method == 'POST':
-        # Удаляем статью
-        article.delete()
-        return redirect('news:catalog')
-
-    context = {
-        **info,
-        'article': article,
-        'categories_list': get_categories_with_count(),
-    }
-    return render(request, 'news/delete_article.html', context)
-
-
-def upload_json_view(request):
-    """
-    Представление для загрузки JSON-файла с новостями
-
-    Логика:
-    1. Если GET-запрос - отображаем форму
-    2. Если POST-запрос - обрабатываем форму:
-       - Валидируем JSON-файл
-       - Если есть новые категории/теги, показываем предупреждение
-       - Если пользователь подтверждает создание новых категорий/тегов,
-         сохраняем JSON-данные в сессии и перенаправляем на редактирование
-    """
-    if request.method == 'POST':
-        form = ArticleUploadForm(request.POST, request.FILES)
-
-        if form.is_valid():
-            # Получаем данные, которые мы сохранили в форме
-            json_data = form.json_data
-            validation_results = form.validation_results
-
-            # Сохраняем список статей с проблемами в сессии
-            if hasattr(form, 'articles_with_issues'):
-                request.session['articles_with_issues'] = form.articles_with_issues
-
-            # Проверяем, есть ли новые категории или теги
-            has_new_items = validation_results['new_categories'] or validation_results['new_tags']
-
-            # Если есть новые элементы и пользователь не подтвердил их создание,
-            # показываем предупреждение
-            if has_new_items and 'confirm' not in request.POST:
-                context = {
-                    **info,
-                    'form': form,
-                    'validation_results': validation_results,
-                    'categories_list': get_categories_with_count(),
-                }
-                return render(request, 'news/upload_json.html', context)
-
-            # Если пользователь подтвердил или нет новых элементов, сохраняем данные в сессии
-
-            # Создаем новые категории, если есть
-            for category_name in validation_results['new_categories']:
-                Category.objects.get_or_create(name=category_name)
-
-            # Создаем новые теги, если есть
-            for tag_name in validation_results['new_tags']:
-                Tag.objects.get_or_create(name=tag_name)
-
-            # Сохраняем данные в сессии для потокового редактирования
-            request.session['json_articles'] = json_data
-            request.session['current_article_index'] = 0
-            request.session['total_articles'] = len(json_data)
-
-            # Перенаправляем на редактирование первой статьи
-            return redirect('news:edit_article_from_json')
-
-    else:
-        form = ArticleUploadForm()
-
-    context = {
-        **info,
-        'form': form,
-        'categories_list': get_categories_with_count(),
-    }
-
-    return render(request, 'news/upload_json.html', context)
-
-
+# Оставляем функции для работы с JSON без изменений, так как они более сложные
 def edit_article_from_json(request):
     """
     Позволяет редактировать статьи из JSON, включая исправление отсутствующих обязательных полей
@@ -798,3 +635,64 @@ def save_articles_from_json(request):
     # Отображаем сообщение об успешном импорте
     messages.success(request, f'Успешно сохранено {saved_articles} статей')
     return redirect('news:catalog')
+
+
+# # Эти функции сохраняем для обратной совместимости, чтобы не было ошибок
+# def main(request):
+#     return MainView.as_view()(request)
+#
+#
+# def about(request):
+#     return AboutView.as_view()(request)
+#
+#
+# def get_all_news(request):
+#     return CatalogListView.as_view()(request)
+#
+#
+# def get_news_by_category(request, category_id):
+#     return CategoryNewsListView.as_view()(request, category_id=category_id)
+#
+#
+# def get_news_by_tag(request, tag_id):
+#     return TagNewsListView.as_view()(request, tag_id=tag_id)
+#
+#
+# def toggle_favorite(request, article_id):
+#     return ToggleFavoriteView.as_view()(request, article_id=article_id)
+#
+#
+# def toggle_like(request, article_id):
+#     return ToggleLikeView.as_view()(request, article_id=article_id)
+#
+#
+# def get_favorite_news(request):
+#     return FavoriteNewsListView.as_view()(request)
+#
+#
+# def get_detail_article_by_id(request, article_id):
+#     return ArticleDetailView.as_view()(request, article_id=article_id)
+#
+#
+# def get_detail_article_by_title(request, title):
+#     return ArticleDetailBySlugView.as_view()(request, title=title)
+#
+#
+# def search_news(request):
+#     return SearchNewsView.as_view()(request)
+#
+#
+# def add_article(request):
+#     return ArticleCreateView.as_view()(request)
+#
+#
+# def article_update(request, article_id):
+#     return ArticleUpdateView.as_view()(request, article_id=article_id)
+#
+#
+# def article_delete(request, article_id):
+#     return ArticleDeleteView.as_view()(request, article_id=article_id)
+#
+#
+# def upload_json_view(request):
+#     return UploadJsonView.as_view()(request)
