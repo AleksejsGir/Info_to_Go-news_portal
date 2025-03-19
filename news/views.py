@@ -432,24 +432,7 @@ class ArticleDeleteView(MenuMixin, DeleteView):
     pk_url_kwarg = 'article_id'  # URL-параметр, содержащий ID статьи
 
 
-# Оставляем функцию catalog без изменений, так как она будет заменена CatalogListView
-def catalog(request):
-    return HttpResponse('Каталог новостей')
-
-
-# Оставляем функцию get_categories без изменений, так как она может использоваться где-то еще
-def get_categories(request):
-    """
-    Возвращает все категории для представления в каталоге
-    """
-    return HttpResponse('All categories')
-
-
-def get_category_by_name(request, slug):
-    return HttpResponse(f"Категория {slug}")
-
-
-# Оставляем функции для работы с JSON без изменений, так как они более сложные
+# Оставляем функции для работы с JSON без изменений, так как они более сложные!!!!
 def edit_article_from_json(request):
     """
     Позволяет редактировать статьи из JSON, включая исправление отсутствующих обязательных полей
@@ -635,64 +618,3 @@ def save_articles_from_json(request):
     # Отображаем сообщение об успешном импорте
     messages.success(request, f'Успешно сохранено {saved_articles} статей')
     return redirect('news:catalog')
-
-
-# # Эти функции сохраняем для обратной совместимости, чтобы не было ошибок
-# def main(request):
-#     return MainView.as_view()(request)
-#
-#
-# def about(request):
-#     return AboutView.as_view()(request)
-#
-#
-# def get_all_news(request):
-#     return CatalogListView.as_view()(request)
-#
-#
-# def get_news_by_category(request, category_id):
-#     return CategoryNewsListView.as_view()(request, category_id=category_id)
-#
-#
-# def get_news_by_tag(request, tag_id):
-#     return TagNewsListView.as_view()(request, tag_id=tag_id)
-#
-#
-# def toggle_favorite(request, article_id):
-#     return ToggleFavoriteView.as_view()(request, article_id=article_id)
-#
-#
-# def toggle_like(request, article_id):
-#     return ToggleLikeView.as_view()(request, article_id=article_id)
-#
-#
-# def get_favorite_news(request):
-#     return FavoriteNewsListView.as_view()(request)
-#
-#
-# def get_detail_article_by_id(request, article_id):
-#     return ArticleDetailView.as_view()(request, article_id=article_id)
-#
-#
-# def get_detail_article_by_title(request, title):
-#     return ArticleDetailBySlugView.as_view()(request, title=title)
-#
-#
-# def search_news(request):
-#     return SearchNewsView.as_view()(request)
-#
-#
-# def add_article(request):
-#     return ArticleCreateView.as_view()(request)
-#
-#
-# def article_update(request, article_id):
-#     return ArticleUpdateView.as_view()(request, article_id=article_id)
-#
-#
-# def article_delete(request, article_id):
-#     return ArticleDeleteView.as_view()(request, article_id=article_id)
-#
-#
-# def upload_json_view(request):
-#     return UploadJsonView.as_view()(request)
