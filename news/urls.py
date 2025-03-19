@@ -27,6 +27,6 @@ urlpatterns = [
 
     # Маршруты для загрузки JSON
     path('upload_json/', views.UploadJsonView.as_view(), name='upload_json'),
-    path('edit_json_article/', views.edit_article_from_json, name='edit_article_from_json'),
-    path('save_json_articles/', views.save_articles_from_json, name='save_articles_from_json'),
+    path('edit_json_article/', views.EditArticleFromJsonView.as_view(), name='edit_article_from_json'),
+    path('save_json_articles/', views.SaveArticlesFromJsonView.as_view(), name='save_articles_from_json'),
 ]
