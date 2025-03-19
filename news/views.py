@@ -45,7 +45,7 @@ class MenuMixin:
         context = super().get_context_data(**kwargs)
         context.update({
             "users_count": 5,
-            "news_count": 10,
+            "news_count": Article.objects.count(),  # Используем метод count вместо len(all())
             "menu": [
                 {"title": "Главная",
                  "url": "/",
@@ -67,6 +67,31 @@ def get_categories_with_count():
     return Category.objects.annotate(news_count=Count('article')).order_by('name')
 
 
+# 14. Выносим общую логику списка статей в отдельный класс
+class BaseArticleListView(MenuMixin, ListView):
+    """
+    Базовый класс для всех представлений, отображающих списки статей.
+    Содержит общую логику и настройки для дочерних классов.
+    """
+    model = Article
+    context_object_name = 'news'
+    paginate_by = 8
+
+    def get_queryset(self):
+        """
+        Базовая реализация получения статей с оптимизацией запросов
+        """
+        return Article.objects.select_related('category').prefetch_related('tags')
+
+    def get_context_data(self, **kwargs):
+        """
+        Добавляет в контекст количество статей в текущей выборке
+        """
+        context = super().get_context_data(**kwargs)
+        context['news_count'] = self.get_queryset().count()
+        return context
+
+
 # 1. Переписать about на TemplateView
 class AboutView(MenuMixin, TemplateView):
     template_name = 'about.html'
@@ -78,15 +103,13 @@ class MainView(MenuMixin, TemplateView):
 
 
 # Представление для отображения всех новостей (каталог)
-class CatalogListView(MenuMixin, ListView):
+class CatalogListView(BaseArticleListView):
     template_name = 'news/catalog.html'
-    context_object_name = 'news'
-    paginate_by = 8
 
     def get_queryset(self):
         # Считаем параметры из GET-запроса
-        sort = self.request.GET.get('sort', 'publication_date')  # по умолчанию сортируем по дате загрузки
-        order = self.request.GET.get('order', 'desc')  # по умолчанию сортируем по убыванию
+        sort = self.request.GET.get('sort', 'publication_date')
+        order = self.request.GET.get('order', 'desc')
 
         # Проверяем дали ли мы разрешение на сортировку по этому полю
         valid_sort_fields = {'publication_date', 'views'}
@@ -99,50 +122,48 @@ class CatalogListView(MenuMixin, ListView):
         else:
             order_by = f'-{sort}'
 
-        return Article.objects.select_related('category').prefetch_related('tags').order_by(order_by)
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['news_count'] = self.get_queryset().count()
-        return context
+        return super().get_queryset().order_by(order_by)
 
 
 # 2. Переписать get_news_by_category на ListView
-class CategoryNewsListView(MenuMixin, ListView):
+class CategoryNewsListView(BaseArticleListView):
     template_name = 'news/catalog.html'
-    context_object_name = 'news'
-    paginate_by = 8
 
     def get_queryset(self):
         self.category = get_object_or_404(Category, id=self.kwargs['category_id'])
-        return Article.objects.select_related('category').prefetch_related('tags').filter(category=self.category)
+        return super().get_queryset().filter(category=self.category)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['current_category'] = self.category
-        context['news_count'] = self.get_queryset().count()
         return context
 
 
 # 3. Переписать get_news_by_tag на ListView
-class TagNewsListView(MenuMixin, ListView):
+class TagNewsListView(BaseArticleListView):
     template_name = 'news/catalog.html'
-    context_object_name = 'news'
-    paginate_by = 8
 
     def get_queryset(self):
         self.tag = get_object_or_404(Tag, id=self.kwargs['tag_id'])
-        return Article.objects.select_related('category').prefetch_related('tags').filter(tags=self.tag)
+        return super().get_queryset().filter(tags=self.tag)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['current_tag'] = self.tag
-        context['news_count'] = self.get_queryset().count()
         return context
 
 
-# 4. Переписать toggle_favorite на View
-class ToggleFavoriteView(View):
+# 15. Выносим повторяющийся код toggle-логики в отдельный класс
+class BaseToggleView(View):
+    """
+    Базовый класс для представлений с логикой переключения состояния (лайки, избранное)
+    """
+    model = None  # Модель для работы (Like или Favorite)
+    session_key = None  # Ключ в сессии ('liked_articles' или 'favorite_articles')
+    response_field = None  # Название поля в JSON-ответе ('liked' или 'is_favorite')
+    count_field = None  # Название поля для счетчика в JSON-ответе ('likes_count' или 'favorites_count')
+    related_name = None  # Имя связи в модели Article ('likes' или 'favorites')
+
     @method_decorator(csrf_protect)
     def post(self, request, article_id):
         try:
@@ -152,95 +173,64 @@ class ToggleFavoriteView(View):
             # Получаем IP-адрес клиента
             ip_address = request.META.get('REMOTE_ADDR')
 
-            # Проверяем существование в избранном
-            favorite, created = Favorite.objects.get_or_create(
+            # Проверяем существование записи
+            obj, created = self.model.objects.get_or_create(
                 article=article,
                 ip_address=ip_address
             )
 
-            # Инициализируем список избранных статей, если его нет
-            if 'favorite_articles' not in request.session:
-                request.session['favorite_articles'] = []
+            # Инициализируем список в сессии, если его нет
+            if self.session_key not in request.session:
+                request.session[self.session_key] = []
 
-            # Если статья уже в избранном - удаляем
+            # Если запись уже существует - удаляем
             if not created:
-                favorite.delete()
-                is_favorite = False
+                obj.delete()
+                is_active = False
                 # Удаляем из сессии
-                if article.id in request.session['favorite_articles']:
-                    request.session['favorite_articles'].remove(article.id)
+                if article.id in request.session[self.session_key]:
+                    request.session[self.session_key].remove(article.id)
                     request.session.modified = True
             else:
-                is_favorite = True
+                is_active = True
                 # Добавляем в сессию
-                if article.id not in request.session['favorite_articles']:
-                    request.session['favorite_articles'].append(article.id)
+                if article.id not in request.session[self.session_key]:
+                    request.session[self.session_key].append(article.id)
                     request.session.modified = True
 
-            # Получаем актуальное количество добавлений в избранное
-            favorites_count = article.favorites.count()
+            # Получаем актуальное количество
+            count = getattr(article, self.related_name).count()
 
-            return JsonResponse({
-                'is_favorite': is_favorite,
-                'favorites_count': favorites_count
-            })
+            # Формируем ответ
+            response_data = {
+                self.response_field: is_active,
+                self.count_field: count
+            }
+
+            return JsonResponse(response_data)
 
         except Exception as e:
             # Логируем возможные ошибки
-            print(f"Ошибка при обработке добавления в избранное: {e}")
+            print(f"Ошибка при обработке toggle: {e}")
             return JsonResponse({'error': 'Произошла ошибка'}, status=400)
+
+
+# 4. Переписать toggle_favorite на View
+class ToggleFavoriteView(BaseToggleView):
+    model = Favorite
+    session_key = 'favorite_articles'
+    response_field = 'is_favorite'
+    count_field = 'favorites_count'
+    related_name = 'favorites'
 
 
 # 5. Переписать toggle_like на View
-class ToggleLikeView(View):
-    @method_decorator(csrf_protect)
-    def post(self, request, article_id):
-        try:
-            # Получаем статью или возвращаем 404
-            article = get_object_or_404(Article, id=article_id)
-
-            # Получаем IP-адрес клиента
-            ip_address = request.META.get('REMOTE_ADDR')
-
-            # Проверяем существование лайка
-            like, created = Like.objects.get_or_create(
-                article=article,
-                ip_address=ip_address
-            )
-
-            # Инициализируем список лайкнутых статей, если его нет
-            if 'liked_articles' not in request.session:
-                request.session['liked_articles'] = []
-
-            # Если лайк уже существует - удаляем
-            if not created:
-                like.delete()
-                liked = False
-
-                # Удаляем из сессии, если статья была в списке лайкнутых
-                if article.id in request.session['liked_articles']:
-                    request.session['liked_articles'].remove(article.id)
-                    request.session.modified = True
-            else:
-                liked = True
-
-                # Добавляем в сессию, если статьи не было в списке лайкнутых
-                if article.id not in request.session['liked_articles']:
-                    request.session['liked_articles'].append(article.id)
-                    request.session.modified = True
-
-            # Получаем актуальное количество лайков
-            likes_count = article.likes.count()
-
-            return JsonResponse({
-                'liked': liked,
-                'likes_count': likes_count
-            })
-
-        except Exception as e:
-            # Логируем возможные ошибки
-            print(f"Ошибка при обработке лайка: {e}")
-            return JsonResponse({'error': 'Произошла ошибка'}, status=400)
+class ToggleLikeView(BaseToggleView):
+    model = Like
+    session_key = 'liked_articles'
+    response_field = 'liked'
+    count_field = 'likes_count'
+    related_name = 'likes'
 
 
 # 6. Переписать upload_json_view на FormView
@@ -292,10 +282,8 @@ class UploadJsonView(MenuMixin, FormView):
 
 
 # 7. Переписать search_news на ListView
-class SearchNewsView(MenuMixin, ListView):
+class SearchNewsView(BaseArticleListView):
     template_name = 'news/search_results.html'
-    context_object_name = 'news'
-    paginate_by = 8
 
     def get_queryset(self):
         query = self.request.GET.get('q', '')
@@ -303,22 +291,19 @@ class SearchNewsView(MenuMixin, ListView):
             return Article.objects.none()
 
         # Создаем сложный запрос с использованием Q для поиска по заголовку и содержанию
-        return Article.objects.select_related('category').prefetch_related('tags').filter(
+        return super().get_queryset().filter(
             Q(title__icontains=query) | Q(content__icontains=query)
         )
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['query'] = self.request.GET.get('q', '')
-        context['news_count'] = self.get_queryset().count()
         return context
 
 
 # 8. Переписать favorites на ListView
-class FavoriteNewsListView(MenuMixin, ListView):
+class FavoriteNewsListView(BaseArticleListView):
     template_name = 'news/favorites.html'
-    context_object_name = 'news'
-    paginate_by = 8
 
     def get_queryset(self):
         # Получаем IP-адрес клиента
@@ -330,47 +315,44 @@ class FavoriteNewsListView(MenuMixin, ListView):
         ).values_list('article_id', flat=True)
 
         # Получаем сами статьи
-        return Article.objects.select_related('category').prefetch_related('tags').filter(
-            id__in=favorite_articles
-        )
+        return super().get_queryset().filter(id__in=favorite_articles)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['news_count'] = self.get_queryset().count()
         context['is_favorites_page'] = True
         return context
 
 
-# 9. Переписать get_detail_article_by_slag на DetailView
-class ArticleDetailBySlugView(MenuMixin, DetailView):
+# Базовый класс для детального просмотра статей
+class BaseArticleDetailView(MenuMixin, DetailView):
+    """
+    Базовый класс для детального просмотра статьи с инкрементом счетчика просмотров
+    """
     model = Article
     template_name = 'news/article_detail.html'
     context_object_name = 'article'
-    slug_url_kwarg = 'title'  # Используем 'title' как аргумент URL для slug
 
     def get(self, request, *args, **kwargs):
         response = super().get(request, *args, **kwargs)
         # Увеличиваем количество просмотров
         article = self.get_object()
         article.views += 1
-        article.save()
-
+        article.save(update_fields=['views'])  # Оптимизация - обновляем только нужное поле
         return response
 
 
+# 9. Переписать get_detail_article_by_slag на DetailView
+class ArticleDetailBySlugView(BaseArticleDetailView):
+    slug_url_kwarg = 'title'  # Используем 'title' как аргумент URL для slug
+
+
 # Представление для детальной страницы статьи по ID
-class ArticleDetailView(MenuMixin, DetailView):
-    model = Article
-    template_name = 'news/article_detail.html'
-    context_object_name = 'article'
+class ArticleDetailView(BaseArticleDetailView):
     pk_url_kwarg = 'article_id'
 
     def get(self, request, *args, **kwargs):
         response = super().get(request, *args, **kwargs)
-        # Увеличиваем количество просмотров
         article = self.get_object()
-        article.views += 1
-        article.save()
 
         # Получаем IP-адрес клиента
         ip_address = request.META.get('REMOTE_ADDR')

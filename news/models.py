@@ -2,18 +2,94 @@ import unidecode
 
 from django.db import models
 from django.utils.text import slugify
+from django.db.models import Q
+
+
+class ArticleQuerySet(models.QuerySet):
+    """Расширенный QuerySet для статей с дополнительными методами запросов"""
+
+    def with_related(self):
+        """Оптимизированный запрос с предзагрузкой связанных объектов"""
+        return self.select_related('category').prefetch_related('tags')
+
+    def search(self, query):
+        """Поиск по заголовку и содержанию"""
+        if not query:
+            return self.none()
+        return self.filter(
+            Q(title__icontains=query) | Q(content__icontains=query)
+        )
+
+    def by_category(self, category):
+        """Фильтрация по категории"""
+        return self.filter(category=category)
+
+    def by_tag(self, tag):
+        """Фильтрация по тегу"""
+        return self.filter(tags=tag)
+
+    def sort_by(self, field, order='desc'):
+        """Сортировка по заданному полю"""
+        valid_fields = {'publication_date', 'views'}
+        if field not in valid_fields:
+            field = 'publication_date'
+
+        if order == 'asc':
+            return self.order_by(field)
+        return self.order_by(f'-{field}')
+
+
+class ArticleManager(models.Manager):
+    """Менеджер для модели Article с дополнительными методами"""
+
+    def get_queryset(self):
+        """Возвращает QuerySet с дополнительными методами"""
+        return ArticleQuerySet(self.model, using=self._db).filter(is_active=True)
+
+    def with_related(self):
+        """Оптимизированный запрос с предзагрузкой связанных объектов"""
+        return self.get_queryset().with_related()
+
+    def search(self, query):
+        """Поиск по заголовку и содержанию"""
+        return self.get_queryset().with_related().search(query)
+
+    def by_category(self, category):
+        """Фильтрация по категории"""
+        return self.get_queryset().with_related().by_category(category)
+
+    def by_tag(self, tag):
+        """Фильтрация по тегу"""
+        return self.get_queryset().with_related().by_tag(tag)
+
+    def sort_by(self, field, order='desc'):
+        """Сортировка по заданному полю"""
+        return self.get_queryset().with_related().sort_by(field, order)
+
+    def sorted_by_title(self):
+        """Метод отсортированных по заголовку"""
+        return self.get_queryset().all().order_by('-title')
 
 
 class AllArticleManager(models.Manager):
     def get_queryset(self):
-        return super().get_queryset()
+        return ArticleQuerySet(self.model, using=self._db)
 
 
-class ArticleManager(models.Manager):
-    def get_queryset(self):
-        return super().get_queryset().filter(is_active=True)
-    def sorted_by_title(self):
-        return self.get_queryset().all().order_by('-title')
+class FavoriteManager(models.Manager):
+    """Менеджер для модели Favorite"""
+
+    def get_favorites_for_ip(self, ip_address):
+        """Получает ID статей, добавленных в избранное с заданного IP"""
+        return self.filter(ip_address=ip_address).values_list('article_id', flat=True)
+
+
+class LikeManager(models.Manager):
+    """Менеджер для модели Like"""
+
+    def get_likes_for_ip(self, ip_address):
+        """Получает ID статей, лайкнутых с заданного IP"""
+        return self.filter(ip_address=ip_address).values_list('article_id', flat=True)
 
 
 class Category(models.Model):
@@ -23,10 +99,11 @@ class Category(models.Model):
         return self.name
 
     class Meta:
-        db_table = 'Categories'  # без указания этого параметра, таблица в БД будет называться вида 'news_categorys'
-        verbose_name = 'Категория'  # единственное число для отображения в админке
-        verbose_name_plural = 'Категории'  # множественное число для отображения в админке
-        ordering = ['name']  # указывает порядок сортировки модели по умолчанию
+        db_table = 'Categories'
+        verbose_name = 'Категория'
+        verbose_name_plural = 'Категории'
+        ordering = ['name']
+
 
 class Tag(models.Model):
     name = models.CharField(max_length=50, unique=True, verbose_name='Тег')
@@ -35,9 +112,9 @@ class Tag(models.Model):
         return self.name
 
     class Meta:
-        db_table = 'Tags'  # без указания этого параметра, таблица в БД будет называться вида 'news_tags'
-        verbose_name = 'Тег'  # единственное число для отображения в админке
-        verbose_name_plural = 'Теги'  # множественное число для отображения в админке
+        db_table = 'Tags'
+        verbose_name = 'Тег'
+        verbose_name_plural = 'Теги'
 
 
 class Article(models.Model):
@@ -71,29 +148,40 @@ class Article(models.Model):
         # Сохраняем статью, чтобы получить id
         super().save(*args, **kwargs)
         if not self.slug:
-            print(f"Title before slugify: {self.title}")  # Отладочное сообщение
+            print(f"Title before slugify: {self.title}")
             base_slug = slugify(unidecode.unidecode(self.title))
             self.slug = f"{base_slug}-{self.id}"
-            print(f"Generated slug: {self.slug}")  # Отладочное сообщение
+            print(f"Generated slug: {self.slug}")
         # Сохраняем статью снова, чтобы обновить слаг
         super().save(*args, **kwargs)
-        print(f"Saved article with slug: {self.slug}")  # Отладочное сообщение
+        print(f"Saved article with slug: {self.slug}")
+
+    def toggle_like(self, ip_address):
+        """Переключает состояние лайка для данного IP-адреса"""
+        like, created = self.likes.get_or_create(ip_address=ip_address)
+        if not created:
+            like.delete()
+        return created, self.likes.count()
+
+    def toggle_favorite(self, ip_address):
+        """Переключает состояние избранного для данного IP-адреса"""
+        favorite, created = self.favorites.get_or_create(ip_address=ip_address)
+        if not created:
+            favorite.delete()
+        return created, self.favorites.count()
+
+    def increment_views(self):
+        """Увеличивает счетчик просмотров на 1"""
+        self.views += 1
+        self.save(update_fields=['views'])
 
     class Meta:
-        db_table = 'Articles'  # без указания этого параметра, таблица в БД будет называться 'news_artcile'
-        verbose_name = 'Статья'  # единственное число для отображения в админке
-        verbose_name_plural = 'Статьи'  # множественное число для отображения в админке
-        # ordering = ['publication_date']  # указывает порядок сортировки модели по умолчанию
-        # unique_together = (...)  # устанавливает уникальность для комбинации полей
-        # index_together = (...)  # создаёт для нескольких полей
-        # indexes = (...)  # определяет пользовательские индексы
-        # abstract = True/False  # делает модель абстрактной, не создаёт таблицу БД, нужна только для наследования другими моделями данных
-        # managed = True/False  # будет ли эта модель управляться (создание, удаление, изменение) с помощью Django или нет
-        # permissions = [...]  # определяет пользовательские разрешения для модели
+        db_table = 'Articles'
+        verbose_name = 'Статья'
+        verbose_name_plural = 'Статьи'
 
     def __str__(self):
         return self.title
-
 
 
 class Like(models.Model):
@@ -109,6 +197,8 @@ class Like(models.Model):
     )
     ip_address = models.GenericIPAddressField(verbose_name='IP-адрес')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Время лайка')
+
+    objects = LikeManager()
 
     class Meta:
         db_table = 'Likes'
@@ -133,6 +223,8 @@ class Favorite(models.Model):
     )
     ip_address = models.GenericIPAddressField(verbose_name='IP-адрес')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Время добавления')
+
+    objects = FavoriteManager()
 
     class Meta:
         db_table = 'Favorites'
