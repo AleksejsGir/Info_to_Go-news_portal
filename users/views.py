@@ -18,6 +18,11 @@ class LoginUser(BaseMixin, LoginView):
     template_name = 'users/login.html'  # Путь к шаблону страницы входа
     redirect_field_name = 'next'  # Параметр для перенаправления после успешного входа
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['hide_sidebar'] = True  # Скрываем сайдбар
+        return context
+
     def get_success_url(self):
         """Определяет URL для перенаправления после успешного входа"""
         # Проверяем, есть ли параметр 'next' в запросе

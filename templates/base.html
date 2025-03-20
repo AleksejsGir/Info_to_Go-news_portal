@@ -52,6 +52,7 @@
     </header>
     <main class="container mt-5">
         <div class="row">
+            {% if not hide_sidebar %}
             <!-- Боковое меню с категориями -->
             <div class="col-md-3">
                 <div class="sidebar">
@@ -78,10 +79,13 @@
                     </ul>
                 </div>
             </div>
-            <!-- Основной контент -->
+            <!-- Основной контент с учетом наличия сайдбара -->
             <div class="col-md-9">
-                {% block content %}
-                {% endblock %}
+            {% else %}
+            <!-- Контент на всю ширину без сайдбара -->
+            <div class="col-12">
+            {% endif %}
+                {% block content %}{% endblock %}
             </div>
         </div>
     </main>
