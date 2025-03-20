@@ -1,5 +1,5 @@
 import unidecode
-
+import time
 from django.db import models
 from django.utils.text import slugify
 from django.db.models import Q
@@ -10,7 +10,8 @@ class ArticleQuerySet(models.QuerySet):
 
     def with_related(self):
         """Оптимизированный запрос с предзагрузкой связанных объектов"""
-        return self.select_related('category').prefetch_related('tags').order_by('-publication_date')  # Добавлена явная сортировка
+        return self.select_related('category').prefetch_related('tags').order_by(
+            '-publication_date')  # Добавлена явная сортировка
 
     def search(self, query):
         """Поиск по заголовку и содержанию"""
@@ -106,7 +107,7 @@ class Category(models.Model):
 
 
 class Tag(models.Model):
-    name = models.CharField(max_length=50, unique=True, verbose_name='Тег')
+    name = models.CharField( unique=True, verbose_name='Тег')
 
     def __str__(self):
         return self.name
@@ -145,16 +146,18 @@ class Article(models.Model):
     all_objects = AllArticleManager()
 
     def save(self, *args, **kwargs):
-        # Сохраняем статью, чтобы получить id
-        super().save(*args, **kwargs)
+        # Если slug не установлен - генерируем его
         if not self.slug:
-            print(f"Title before slugify: {self.title}")
-            base_slug = slugify(unidecode.unidecode(self.title))
-            self.slug = f"{base_slug}-{self.id}"
-            print(f"Generated slug: {self.slug}")
-        # Сохраняем статью снова, чтобы обновить слаг
+            # Базовый slug из заголовка или 'untitled'
+            base = slugify(unidecode.unidecode(self.title)) if self.title else 'untitled'
+            # Ограничиваем длину базового slug и добавляем метку времени для уникальности
+            max_length = 40  # Оставляем место для timestamp
+            base = base[:max_length]
+            timestamp = str(int(time.time()))[-6:]  # Берем последние 6 цифр timestamp
+            self.slug = f"{base}-{timestamp}"
+
+        # Один вызов save вместо двух
         super().save(*args, **kwargs)
-        print(f"Saved article with slug: {self.slug}")
 
     def toggle_like(self, ip_address):
         """Переключает состояние лайка для данного IP-адреса"""
@@ -174,6 +177,14 @@ class Article(models.Model):
         """Увеличивает счетчик просмотров на 1"""
         self.views += 1
         self.save(update_fields=['views'])
+
+    def is_liked_by_ip(self, ip_address):
+        """Проверяет, лайкнута ли статья с данного IP"""
+        return self.likes.filter(ip_address=ip_address).exists()
+
+    def is_favorite_for_ip(self, ip_address):
+        """Проверяет, добавлена ли статья в избранное с данного IP"""
+        return self.favorites.filter(ip_address=ip_address).exists()
 
     class Meta:
         db_table = 'Articles'

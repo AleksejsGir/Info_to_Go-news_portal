@@ -61,16 +61,26 @@ class BaseArticleListView(BaseMixin, ListView):
     def get_queryset(self):
         """
         Базовая реализация получения статей с оптимизацией запросов
-        Используем метод из модели вместо прямого запроса
+        и дополнительной поддержкой сортировки
         """
-        return Article.objects.with_related()
+        # Получаем параметры сортировки из GET-запроса
+        sort = self.request.GET.get('sort', 'publication_date')
+        order = self.request.GET.get('order', 'desc')
+
+        # Используем метод сортировки из модели
+        return Article.objects.sort_by(sort, order)
 
     def get_context_data(self, **kwargs):
         """
         Добавляет в контекст количество статей в текущей выборке
+        и параметры текущей сортировки для сохранения при пагинации
         """
         context = super().get_context_data(**kwargs)
-        context['news_count'] = self.get_queryset().count()
+        context.update({
+            'news_count': self.get_queryset().count(),
+            'current_sort': self.request.GET.get('sort', 'publication_date'),
+            'current_order': self.request.GET.get('order', 'desc')
+        })
         return context
 
 
@@ -86,16 +96,11 @@ class MainView(BaseMixin, TemplateView):
 
 # Представление для отображения всех новостей (каталог)
 class CatalogListView(BaseArticleListView):
+    """
+    Отображает каталог всех новостей с сортировкой
+    Вся логика сортировки уже в базовом классе!
+    """
     template_name = 'news/catalog.html'
-
-    def get_queryset(self):
-        # Считаем параметры из GET-запроса
-        sort = self.request.GET.get('sort', 'publication_date')
-        order = self.request.GET.get('order', 'desc')
-
-        # Используем метод сортировки из модели, который содержит логику
-        # проверки допустимых полей и направления сортировки
-        return Article.objects.sort_by(sort, order)
 
 
 # 2. Переписать get_news_by_category на ListView
@@ -104,8 +109,9 @@ class CategoryNewsListView(BaseArticleListView):
 
     def get_queryset(self):
         self.category = get_object_or_404(Category, id=self.kwargs['category_id'])
-        # Используем метод фильтрации по категории из модели
-        return Article.objects.by_category(self.category)
+        # Получаем базовый queryset и применяем фильтр по категории
+        queryset = super().get_queryset()
+        return queryset.by_category(self.category)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -119,8 +125,9 @@ class TagNewsListView(BaseArticleListView):
 
     def get_queryset(self):
         self.tag = get_object_or_404(Tag, id=self.kwargs['tag_id'])
-        # Используем метод фильтрации по тегу из модели
-        return Article.objects.by_tag(self.tag)
+        # Получаем базовый queryset и применяем фильтр по тегу
+        queryset = super().get_queryset()
+        return queryset.by_tag(self.tag)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -137,7 +144,6 @@ class BaseToggleView(View):
     session_key = None  # Ключ в сессии ('liked_articles' или 'favorite_articles')
     response_field = None  # Название поля в JSON-ответе ('liked' или 'is_favorite')
     count_field = None  # Название поля для счетчика в JSON-ответе ('likes_count' или 'favorites_count')
-    related_name = None  # Имя связи в модели Article ('likes' или 'favorites')
     toggle_method = None  # Метод модели Article для переключения состояния
 
     @method_decorator(csrf_protect)
@@ -150,38 +156,11 @@ class BaseToggleView(View):
             ip_address = request.META.get('REMOTE_ADDR')
 
             # Используем метод модели для переключения состояния
-            if self.toggle_method == 'toggle_like':
-                is_active, count = article.toggle_like(ip_address)
-            elif self.toggle_method == 'toggle_favorite':
-                is_active, count = article.toggle_favorite(ip_address)
-            else:
-                # Если метод не указан, используем стандартную логику
-                # Проверяем существование записи
-                obj, created = self.model.objects.get_or_create(
-                    article=article,
-                    ip_address=ip_address
-                )
-
-                # Если запись уже существует - удаляем
-                if not created:
-                    obj.delete()
-                    is_active = False
-                    count = getattr(article, self.related_name).count()
-                else:
-                    is_active = True
-                    count = getattr(article, self.related_name).count()
-
-            # Инициализируем список в сессии, если его нет
-            if self.session_key not in request.session:
-                request.session[self.session_key] = []
+            method = getattr(article, self.toggle_method)
+            is_active, count = method(ip_address)
 
             # Обновляем сессию
-            if is_active and article.id not in request.session[self.session_key]:
-                request.session[self.session_key].append(article.id)
-                request.session.modified = True
-            elif not is_active and article.id in request.session[self.session_key]:
-                request.session[self.session_key].remove(article.id)
-                request.session.modified = True
+            self._update_session(request, article.id, is_active)
 
             # Формируем ответ
             response_data = {
@@ -194,7 +173,21 @@ class BaseToggleView(View):
         except Exception as e:
             # Логируем возможные ошибки
             print(f"Ошибка при обработке toggle: {e}")
-            return JsonResponse({'error': 'Произошла ошибка'}, status=400)
+            return JsonResponse({'error': str(e)}, status=400)
+
+    def _update_session(self, request, article_id, is_active):
+        """Обновляет сессию с учетом состояния (добавлено/удалено)"""
+        # Создаем список в сессии, если его нет
+        if self.session_key not in request.session:
+            request.session[self.session_key] = []
+
+        # Обновляем список в сессии
+        if is_active and article_id not in request.session[self.session_key]:
+            request.session[self.session_key].append(article_id)
+            request.session.modified = True
+        elif not is_active and article_id in request.session[self.session_key]:
+            request.session[self.session_key].remove(article_id)
+            request.session.modified = True
 
 
 # 4. Переписать toggle_favorite на View
@@ -204,7 +197,7 @@ class ToggleFavoriteView(BaseToggleView):
     response_field = 'is_favorite'
     count_field = 'favorites_count'
     related_name = 'favorites'
-    toggle_method = 'toggle_favorite'  # Используем метод модели
+    toggle_method = 'toggle_favorite'
 
 
 # 5. Переписать toggle_like на View
@@ -214,7 +207,7 @@ class ToggleLikeView(BaseToggleView):
     response_field = 'liked'
     count_field = 'likes_count'
     related_name = 'likes'
-    toggle_method = 'toggle_like'  # Используем метод модели
+    toggle_method = 'toggle_like'
 
 
 # 6. Переписать upload_json_view на FormView
@@ -243,13 +236,8 @@ class UploadJsonView(BaseMixin, FormView):
                 validation_results=validation_results
             ))
 
-        # Создаем новые категории, если есть
-        for category_name in validation_results['new_categories']:
-            Category.objects.get_or_create(name=category_name)
-
-        # Создаем новые теги, если есть
-        for tag_name in validation_results['new_tags']:
-            Tag.objects.get_or_create(name=tag_name)
+        # Создаем новые категории и теги
+        self._create_new_categories_and_tags(validation_results)
 
         # Сохраняем данные в сессии для потокового редактирования
         self.request.session['json_articles'] = json_data
@@ -257,6 +245,16 @@ class UploadJsonView(BaseMixin, FormView):
         self.request.session['total_articles'] = len(json_data)
 
         return super().form_valid(form)
+
+    def _create_new_categories_and_tags(self, validation_results):
+        """Создает новые категории и теги на основе результатов валидации"""
+        # Создаем новые категории, если есть
+        for category_name in validation_results['new_categories']:
+            Category.objects.get_or_create(name=category_name)
+
+        # Создаем новые теги, если есть
+        for tag_name in validation_results['new_tags']:
+            Tag.objects.get_or_create(name=tag_name)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -271,7 +269,7 @@ class SearchNewsView(BaseArticleListView):
 
     def get_queryset(self):
         query = self.request.GET.get('q', '')
-        # Используем метод поиска из модели вместо прямого фильтра
+        # Используем метод поиска из модели
         return Article.objects.search(query)
 
     def get_context_data(self, **kwargs):
@@ -291,8 +289,8 @@ class FavoriteNewsListView(BaseArticleListView):
         # Используем метод менеджера для получения ID избранных статей
         favorite_articles = Favorite.objects.get_favorites_for_ip(ip_address)
 
-        # Получаем сами статьи
-        return Article.objects.with_related().filter(id__in=favorite_articles)
+        # Получаем базовый queryset с сортировкой и применяем фильтр
+        return super().get_queryset().filter(id__in=favorite_articles)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -313,6 +311,13 @@ class BaseArticleDetailView(BaseMixin, DetailView):
         response = super().get(request, *args, **kwargs)
         article = self.get_object()
 
+        # Увеличиваем просмотры только для новых посещений
+        self._track_article_view(request, article)
+
+        return response
+
+    def _track_article_view(self, request, article):
+        """Отслеживает просмотр статьи и обновляет счетчик при необходимости"""
         # Инициализация списка просмотренных статей в сессии
         if 'viewed_articles' not in request.session:
             request.session['viewed_articles'] = []
@@ -320,15 +325,12 @@ class BaseArticleDetailView(BaseMixin, DetailView):
         # Получаем список просмотренных статей
         viewed_articles = request.session['viewed_articles']
 
-        # Увеличиваем счетчик только если эта статья еще не была просмотрена в текущей сессии
+        # Увеличиваем счетчик только если статья еще не просматривалась
         if article.id not in viewed_articles:
             article.increment_views()
             # Добавляем ID статьи в список просмотренных
             viewed_articles.append(article.id)
-            request.session['viewed_articles'] = viewed_articles
             request.session.modified = True
-
-        return response
 
 
 # 9. Переписать get_detail_article_by_slag на DetailView
@@ -341,31 +343,33 @@ class ArticleDetailView(BaseArticleDetailView):
     pk_url_kwarg = 'article_id'
 
     def get(self, request, *args, **kwargs):
+        # Вызываем родительский метод, который уже увеличивает счетчик просмотров
         response = super().get(request, *args, **kwargs)
         article = self.get_object()
 
-        # Получаем IP-адрес клиента
+        # Получаем IP-адрес и проверяем статус лайка
         ip_address = request.META.get('REMOTE_ADDR')
+        is_liked = article.is_liked_by_ip(ip_address)
 
-        # Проверяем, лайкнул ли текущий IP эту статью, используя менеджер модели
-        is_liked = Like.objects.filter(article=article, ip_address=ip_address).exists()
+        # Синхронизируем сессию с базой данных
+        self._sync_liked_status_with_session(request, article.id, is_liked)
 
-        # Инициализируем список лайкнутых статей в сессии, если его нет
+        return response
+
+    def _sync_liked_status_with_session(self, request, article_id, is_liked):
+        """Синхронизирует состояние лайка между БД и сессией"""
+        # Инициализируем сессию, если нужно
         if 'liked_articles' not in request.session:
             request.session['liked_articles'] = []
 
-        # Обновляем список лайкнутых статей в сессии
+        # Обновляем сессию в соответствии с состоянием в БД
         liked_articles = request.session['liked_articles']
-        if is_liked and article.id not in liked_articles:
-            liked_articles.append(article.id)
-            request.session['liked_articles'] = liked_articles
+        if is_liked and article_id not in liked_articles:
+            liked_articles.append(article_id)
             request.session.modified = True
-        elif not is_liked and article.id in liked_articles:
-            liked_articles.remove(article.id)
-            request.session['liked_articles'] = liked_articles
+        elif not is_liked and article_id in liked_articles:
+            liked_articles.remove(article_id)
             request.session.modified = True
-
-        return response
 
 
 # 10. Переписать add_article на CreateView
@@ -407,43 +411,77 @@ class ArticleDeleteView(BaseMixin, DeleteView):
 # 13. Преобразуем функцию edit_article_from_json в класс
 class EditArticleFromJsonView(BaseMixin, View):
     def get(self, request):
-        # Проверяем, есть ли данные в сессии
+        # Проверяем наличие данных в сессии
         if 'json_articles' not in request.session:
             messages.error(request, 'Сначала загрузите JSON-файл с новостями')
             return redirect('news:upload_json')
 
-        # Получаем данные из сессии
-        json_articles = request.session['json_articles']
-        current_index = request.session['current_article_index']
-        total_articles = request.session['total_articles']
+        # Получаем все необходимые данные из сессии
+        session_data = self._get_session_data(request)
 
-        # Получаем список проблем, если он доступен
-        articles_with_issues = request.session.get('articles_with_issues', [])
-
-        # Проверяем, не закончили ли мы
-        if current_index >= total_articles:
+        # Проверяем, не закончился ли список статей
+        if session_data['current_index'] >= session_data['total_articles']:
             messages.success(request, 'Все статьи отредактированы')
             return redirect('news:save_articles_from_json')
 
+        # Подготавливаем контекст для шаблона
+        context = self._prepare_context(request, session_data)
+
+        return render(request, 'news/edit_article_from_json.html', context)
+
+    def post(self, request):
+        # Проверяем наличие данных в сессии
+        if 'json_articles' not in request.session:
+            messages.error(request, 'Сначала загрузите JSON-файл с новостями')
+            return redirect('news:upload_json')
+
+        # Получаем все необходимые данные из сессии
+        session_data = self._get_session_data(request)
+
+        # Получаем текущую статью и обновляем её данные
+        current_article = session_data['json_articles'][session_data['current_index']]
+        self._update_article_data(request, current_article)
+
+        # Обновляем сессию
+        session_data['json_articles'][session_data['current_index']] = current_article
+        request.session['json_articles'] = session_data['json_articles']
+
+        # Проверяем и обновляем статус проблем
+        self._update_issues_status(request, current_article, session_data)
+
+        # Обрабатываем кнопки навигации
+        return self._handle_navigation(request)
+
+    def _get_session_data(self, request):
+        """Извлекает и возвращает все необходимые данные из сессии"""
+        return {
+            'json_articles': request.session['json_articles'],
+            'current_index': request.session['current_article_index'],
+            'total_articles': request.session['total_articles'],
+            'articles_with_issues': request.session.get('articles_with_issues', [])
+        }
+
+    def _prepare_context(self, request, session_data):
+        """Подготавливает контекст для шаблона"""
         # Получаем текущую статью
-        current_article = json_articles[current_index]
+        current_article = session_data['json_articles'][session_data['current_index']]
 
-        # Проверяем, есть ли у текущей статьи проблемы
-        current_article_issues = None
-        for article_issue in articles_with_issues:
-            if article_issue['index'] == current_index:
-                current_article_issues = article_issue['missing_fields']
-                break
+        # Определяем проблемы с текущей статьей, если есть
+        current_article_issues = self._get_article_issues(
+            session_data['current_index'],
+            session_data['articles_with_issues']
+        )
 
-        # Получаем категорию и теги для формы
+        # Получаем категорию и теги
         category_name = current_article.get('category', '')
         category = Category.objects.filter(name__iexact=category_name).first()
         article_tags = current_article.get('tags', [])
 
-        context = {
+        # Формируем контекст
+        return {
             'article': current_article,
-            'current_index': current_index,
-            'total_articles': total_articles,
+            'current_index': session_data['current_index'],
+            'total_articles': session_data['total_articles'],
             'categories': Category.objects.all(),
             'tags': Tag.objects.all(),
             'selected_category': category,
@@ -452,58 +490,36 @@ class EditArticleFromJsonView(BaseMixin, View):
             'missing_fields': current_article_issues
         }
 
-        return render(request, 'news/edit_article_from_json.html', context)
-
-    def post(self, request):
-        # Проверяем, есть ли данные в сессии
-        if 'json_articles' not in request.session:
-            messages.error(request, 'Сначала загрузите JSON-файл с новостями')
-            return redirect('news:upload_json')
-
-        # Получаем данные из сессии
-        json_articles = request.session['json_articles']
-        current_index = request.session['current_article_index']
-        total_articles = request.session['total_articles']
-
-        # Получаем список проблем, если он доступен
-        articles_with_issues = request.session.get('articles_with_issues', [])
-
-        # Получаем текущую статью
-        current_article = json_articles[current_index]
-
-        # Проверяем, есть ли у текущей статьи проблемы
-        current_article_issues = None
-        for article_issue in articles_with_issues:
-            if article_issue['index'] == current_index:
-                current_article_issues = article_issue['missing_fields']
-                break
-
-        # Обрабатываем отправку формы
-        # Обновляем данные статьи в сессии
-        current_article['title'] = request.POST.get('title', '')
-        current_article['content'] = request.POST.get('content', '')
-        current_article['category'] = request.POST.get('category', '')
+    def _update_article_data(self, request, article):
+        """Обновляет данные статьи из POST-запроса"""
+        article['title'] = request.POST.get('title', '')
+        article['content'] = request.POST.get('content', '')
+        article['category'] = request.POST.get('category', '')
 
         # Обрабатываем теги
         selected_tags = []
         for tag in Tag.objects.all():
             if f'tag_{tag.id}' in request.POST:
                 selected_tags.append(tag.name)
-        current_article['tags'] = selected_tags
+        article['tags'] = selected_tags
 
-        # Обновляем сессию
-        json_articles[current_index] = current_article
-        request.session['json_articles'] = json_articles
+    def _update_issues_status(self, request, article, session_data):
+        """Проверяет и обновляет статус проблем для статьи"""
+        current_index = session_data['current_index']
+        articles_with_issues = session_data['articles_with_issues']
 
-        # Если у этой статьи были проблемы, проверяем, исправлены ли они
+        # Получаем текущие проблемы
+        current_article_issues = self._get_article_issues(current_index, articles_with_issues)
+
         if current_article_issues:
+            # Проверяем, остались ли еще проблемы
             still_missing = []
-            if not current_article['title']:
+            if not article['title']:
                 still_missing.append('title')
-            if not current_article['content']:
+            if not article['content']:
                 still_missing.append('content')
 
-            # Если проблемы исправлены, обновляем список статей с проблемами
+            # Обновляем список проблем
             if not still_missing:
                 # Удаляем эту статью из списка проблем
                 request.session['articles_with_issues'] = [
@@ -518,9 +534,17 @@ class EditArticleFromJsonView(BaseMixin, View):
                         break
                 request.session['articles_with_issues'] = articles_with_issues
 
-        # Обрабатываем кнопки навигации
+    def _get_article_issues(self, current_index, articles_with_issues):
+        """Находит проблемы для текущей статьи"""
+        for article_issue in articles_with_issues:
+            if article_issue['index'] == current_index:
+                return article_issue['missing_fields']
+        return None
+
+    def _handle_navigation(self, request):
+        """Обрабатывает навигационные кнопки формы"""
         if 'next_article' in request.POST:
-            request.session['current_article_index'] = current_index + 1
+            request.session['current_article_index'] += 1
             return redirect('news:edit_article_from_json')
         elif 'save_all' in request.POST:
             return redirect('news:save_articles_from_json')
@@ -549,12 +573,24 @@ class SaveArticlesFromJsonView(View):
         json_articles = request.session['json_articles']
 
         # Сохраняем статьи
+        saved_articles = self._save_articles(json_articles)
+
+        # Очищаем сессию
+        self._clear_session(request)
+
+        # Отображаем сообщение об успешном импорте
+        messages.success(request, f'Успешно сохранено {saved_articles} статей')
+        return redirect('news:catalog')
+
+    def _save_articles(self, json_articles):
+        """Сохраняет статьи из JSON в базу данных, пропуская дубликаты."""
         saved_articles = 0
+        existing_titles = set(Article.objects.values_list('title', flat=True))
 
         for article_data in json_articles:
             try:
-                # Пропускаем статьи с отсутствующими обязательными полями
-                if not article_data.get('title') or not article_data.get('content'):
+                # Пропускаем статьи с отсутствующими обязательными полями или дубликатами
+                if not article_data.get('title') or not article_data.get('content') or article_data['title'] in existing_titles:
                     continue
 
                 # Создаем новую статью
@@ -586,22 +622,24 @@ class SaveArticlesFromJsonView(View):
                         article.tags.add(tag)
 
                 saved_articles += 1
+                existing_titles.add(article_data['title'])  # Добавляем сохраненную статью в набор существующих
 
             except Exception as e:
                 # Если что-то пошло не так, логируем ошибку
                 print(f"Ошибка при сохранении статьи: {e}")
                 continue
 
-        # Очищаем сессию
-        if 'json_articles' in request.session:
-            del request.session['json_articles']
-        if 'current_article_index' in request.session:
-            del request.session['current_article_index']
-        if 'total_articles' in request.session:
-            del request.session['total_articles']
-        if 'articles_with_issues' in request.session:
-            del request.session['articles_with_issues']
+        return saved_articles
 
-        # Отображаем сообщение об успешном импорте
-        messages.success(request, f'Успешно сохранено {saved_articles} статей')
-        return redirect('news:catalog')
+    def _clear_session(self, request):
+        """Очищает сессию от данных JSON"""
+        session_keys = [
+            'json_articles',
+            'current_article_index',
+            'total_articles',
+            'articles_with_issues'
+        ]
+
+        for key in session_keys:
+            if key in request.session:
+                del request.session[key]
