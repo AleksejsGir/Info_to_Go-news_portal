@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'debug_toolbar',
 
     'news',
+    'users',
 ]
 
 MIDDLEWARE = [
@@ -138,6 +139,9 @@ STATIC_URL = 'static/'
 # Настройки для медиафайлов
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+# Настройка URL для перенаправления при попытке доступа к защищенным страницам
+LOGIN_URL = 'users:login'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field

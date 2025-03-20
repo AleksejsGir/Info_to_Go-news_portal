@@ -1,4 +1,5 @@
 # news/views.py
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.db.models import Count, Q
@@ -211,7 +212,7 @@ class ToggleLikeView(BaseToggleView):
 
 
 # 6. Переписать upload_json_view на FormView
-class UploadJsonView(BaseMixin, FormView):
+class UploadJsonView(LoginRequiredMixin, BaseMixin, FormView):
     template_name = 'news/upload_json.html'
     form_class = ArticleUploadForm
     success_url = reverse_lazy('news:edit_article_from_json')
@@ -279,7 +280,7 @@ class SearchNewsView(BaseArticleListView):
 
 
 # 8. Переписать favorites на ListView
-class FavoriteNewsListView(BaseArticleListView):
+class FavoriteNewsListView(LoginRequiredMixin, BaseArticleListView):
     template_name = 'news/favorites.html'
 
     def get_queryset(self):
@@ -373,10 +374,11 @@ class ArticleDetailView(BaseArticleDetailView):
 
 
 # 10. Переписать add_article на CreateView
-class ArticleCreateView(BaseMixin, CreateView):
+class ArticleCreateView(LoginRequiredMixin, BaseMixin, CreateView):
     model = Article
     form_class = ArticleForm
     template_name = 'news/add_article.html'
+    redirect_field_name = 'next'
 
     def form_valid(self, form):
         # Извлекаем валидированные данные из формы
@@ -390,26 +392,28 @@ class ArticleCreateView(BaseMixin, CreateView):
 
 
 # 11. Переписать article_update на UpdateView
-class ArticleUpdateView(BaseMixin, UpdateView):
+class ArticleUpdateView(LoginRequiredMixin, BaseMixin, UpdateView):
     model = Article
     form_class = ArticleForm
     template_name = 'news/edit_article.html'
     pk_url_kwarg = 'article_id'  # URL-параметр, содержащий ID статьи
+    redirect_field_name = 'next'
 
     def get_success_url(self):
         return reverse_lazy('news:detail_article_by_id', kwargs={'article_id': self.object.id})
 
 
 # 12. Переписать article_delete на DeleteView
-class ArticleDeleteView(BaseMixin, DeleteView):
+class ArticleDeleteView(LoginRequiredMixin, BaseMixin, DeleteView):
     model = Article
     template_name = 'news/delete_article.html'
     success_url = reverse_lazy('news:catalog')
     pk_url_kwarg = 'article_id'  # URL-параметр, содержащий ID статьи
+    redirect_field_name = 'next'
 
 
 # 13. Преобразуем функцию edit_article_from_json в класс
-class EditArticleFromJsonView(BaseMixin, View):
+class EditArticleFromJsonView(LoginRequiredMixin, BaseMixin, View):
     def get(self, request):
         # Проверяем наличие данных в сессии
         if 'json_articles' not in request.session:
@@ -554,7 +558,7 @@ class EditArticleFromJsonView(BaseMixin, View):
 
 
 # 14. Преобразуем функцию save_articles_from_json в класс
-class SaveArticlesFromJsonView(View):
+class SaveArticlesFromJsonView(LoginRequiredMixin, View):
     def get(self, request):
         if 'json_articles' not in request.session:
             messages.error(request, 'Нет данных для сохранения')
