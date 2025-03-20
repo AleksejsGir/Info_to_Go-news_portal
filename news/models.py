@@ -10,7 +10,7 @@ class ArticleQuerySet(models.QuerySet):
 
     def with_related(self):
         """Оптимизированный запрос с предзагрузкой связанных объектов"""
-        return self.select_related('category').prefetch_related('tags')
+        return self.select_related('category').prefetch_related('tags').order_by('-publication_date')  # Добавлена явная сортировка
 
     def search(self, query):
         """Поиск по заголовку и содержанию"""
@@ -179,6 +179,7 @@ class Article(models.Model):
         db_table = 'Articles'
         verbose_name = 'Статья'
         verbose_name_plural = 'Статьи'
+        ordering = ['-publication_date']  # Добавлено упорядочивание по умолчанию
 
     def __str__(self):
         return self.title

@@ -61,8 +61,9 @@ class BaseArticleListView(BaseMixin, ListView):
     def get_queryset(self):
         """
         Базовая реализация получения статей с оптимизацией запросов
+        Используем метод из модели вместо прямого запроса
         """
-        return Article.objects.select_related('category').prefetch_related('tags')
+        return Article.objects.with_related()
 
     def get_context_data(self, **kwargs):
         """
@@ -92,18 +93,9 @@ class CatalogListView(BaseArticleListView):
         sort = self.request.GET.get('sort', 'publication_date')
         order = self.request.GET.get('order', 'desc')
 
-        # Проверяем дали ли мы разрешение на сортировку по этому полю
-        valid_sort_fields = {'publication_date', 'views'}
-        if sort not in valid_sort_fields:
-            sort = 'publication_date'
-
-        # Обрабатываем направление сортировки
-        if order == 'asc':
-            order_by = sort
-        else:
-            order_by = f'-{sort}'
-
-        return super().get_queryset().order_by(order_by)
+        # Используем метод сортировки из модели, который содержит логику
+        # проверки допустимых полей и направления сортировки
+        return Article.objects.sort_by(sort, order)
 
 
 # 2. Переписать get_news_by_category на ListView
@@ -112,7 +104,8 @@ class CategoryNewsListView(BaseArticleListView):
 
     def get_queryset(self):
         self.category = get_object_or_404(Category, id=self.kwargs['category_id'])
-        return super().get_queryset().filter(category=self.category)
+        # Используем метод фильтрации по категории из модели
+        return Article.objects.by_category(self.category)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -126,7 +119,8 @@ class TagNewsListView(BaseArticleListView):
 
     def get_queryset(self):
         self.tag = get_object_or_404(Tag, id=self.kwargs['tag_id'])
-        return super().get_queryset().filter(tags=self.tag)
+        # Используем метод фильтрации по тегу из модели
+        return Article.objects.by_tag(self.tag)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -144,6 +138,7 @@ class BaseToggleView(View):
     response_field = None  # Название поля в JSON-ответе ('liked' или 'is_favorite')
     count_field = None  # Название поля для счетчика в JSON-ответе ('likes_count' или 'favorites_count')
     related_name = None  # Имя связи в модели Article ('likes' или 'favorites')
+    toggle_method = None  # Метод модели Article для переключения состояния
 
     @method_decorator(csrf_protect)
     def post(self, request, article_id):
@@ -154,33 +149,39 @@ class BaseToggleView(View):
             # Получаем IP-адрес клиента
             ip_address = request.META.get('REMOTE_ADDR')
 
-            # Проверяем существование записи
-            obj, created = self.model.objects.get_or_create(
-                article=article,
-                ip_address=ip_address
-            )
+            # Используем метод модели для переключения состояния
+            if self.toggle_method == 'toggle_like':
+                is_active, count = article.toggle_like(ip_address)
+            elif self.toggle_method == 'toggle_favorite':
+                is_active, count = article.toggle_favorite(ip_address)
+            else:
+                # Если метод не указан, используем стандартную логику
+                # Проверяем существование записи
+                obj, created = self.model.objects.get_or_create(
+                    article=article,
+                    ip_address=ip_address
+                )
+
+                # Если запись уже существует - удаляем
+                if not created:
+                    obj.delete()
+                    is_active = False
+                    count = getattr(article, self.related_name).count()
+                else:
+                    is_active = True
+                    count = getattr(article, self.related_name).count()
 
             # Инициализируем список в сессии, если его нет
             if self.session_key not in request.session:
                 request.session[self.session_key] = []
 
-            # Если запись уже существует - удаляем
-            if not created:
-                obj.delete()
-                is_active = False
-                # Удаляем из сессии
-                if article.id in request.session[self.session_key]:
-                    request.session[self.session_key].remove(article.id)
-                    request.session.modified = True
-            else:
-                is_active = True
-                # Добавляем в сессию
-                if article.id not in request.session[self.session_key]:
-                    request.session[self.session_key].append(article.id)
-                    request.session.modified = True
-
-            # Получаем актуальное количество
-            count = getattr(article, self.related_name).count()
+            # Обновляем сессию
+            if is_active and article.id not in request.session[self.session_key]:
+                request.session[self.session_key].append(article.id)
+                request.session.modified = True
+            elif not is_active and article.id in request.session[self.session_key]:
+                request.session[self.session_key].remove(article.id)
+                request.session.modified = True
 
             # Формируем ответ
             response_data = {
@@ -203,6 +204,7 @@ class ToggleFavoriteView(BaseToggleView):
     response_field = 'is_favorite'
     count_field = 'favorites_count'
     related_name = 'favorites'
+    toggle_method = 'toggle_favorite'  # Используем метод модели
 
 
 # 5. Переписать toggle_like на View
@@ -212,6 +214,7 @@ class ToggleLikeView(BaseToggleView):
     response_field = 'liked'
     count_field = 'likes_count'
     related_name = 'likes'
+    toggle_method = 'toggle_like'  # Используем метод модели
 
 
 # 6. Переписать upload_json_view на FormView
@@ -268,13 +271,8 @@ class SearchNewsView(BaseArticleListView):
 
     def get_queryset(self):
         query = self.request.GET.get('q', '')
-        if not query:
-            return Article.objects.none()
-
-        # Создаем сложный запрос с использованием Q для поиска по заголовку и содержанию
-        return super().get_queryset().filter(
-            Q(title__icontains=query) | Q(content__icontains=query)
-        )
+        # Используем метод поиска из модели вместо прямого фильтра
+        return Article.objects.search(query)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -290,13 +288,11 @@ class FavoriteNewsListView(BaseArticleListView):
         # Получаем IP-адрес клиента
         ip_address = self.request.META.get('REMOTE_ADDR')
 
-        # Получаем ID избранных статей
-        favorite_articles = Favorite.objects.filter(
-            ip_address=ip_address
-        ).values_list('article_id', flat=True)
+        # Используем метод менеджера для получения ID избранных статей
+        favorite_articles = Favorite.objects.get_favorites_for_ip(ip_address)
 
         # Получаем сами статьи
-        return super().get_queryset().filter(id__in=favorite_articles)
+        return Article.objects.with_related().filter(id__in=favorite_articles)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -315,10 +311,23 @@ class BaseArticleDetailView(BaseMixin, DetailView):
 
     def get(self, request, *args, **kwargs):
         response = super().get(request, *args, **kwargs)
-        # Увеличиваем количество просмотров
         article = self.get_object()
-        article.views += 1
-        article.save(update_fields=['views'])  # Оптимизация - обновляем только нужное поле
+
+        # Инициализация списка просмотренных статей в сессии
+        if 'viewed_articles' not in request.session:
+            request.session['viewed_articles'] = []
+
+        # Получаем список просмотренных статей
+        viewed_articles = request.session['viewed_articles']
+
+        # Увеличиваем счетчик только если эта статья еще не была просмотрена в текущей сессии
+        if article.id not in viewed_articles:
+            article.increment_views()
+            # Добавляем ID статьи в список просмотренных
+            viewed_articles.append(article.id)
+            request.session['viewed_articles'] = viewed_articles
+            request.session.modified = True
+
         return response
 
 
@@ -338,7 +347,7 @@ class ArticleDetailView(BaseArticleDetailView):
         # Получаем IP-адрес клиента
         ip_address = request.META.get('REMOTE_ADDR')
 
-        # Проверяем, лайкнул ли текущий IP эту статью
+        # Проверяем, лайкнул ли текущий IP эту статью, используя менеджер модели
         is_liked = Like.objects.filter(article=article, ip_address=ip_address).exists()
 
         # Инициализируем список лайкнутых статей в сессии, если его нет
