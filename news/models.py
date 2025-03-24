@@ -3,7 +3,8 @@ import time
 from django.db import models
 from django.utils.text import slugify
 from django.db.models import Q
-
+from django.contrib.auth import get_user_model
+from django.utils.translation import gettext_lazy as _
 
 class ArticleQuerySet(models.QuerySet):
     """Расширенный QuerySet для статей с дополнительными методами запросов"""
@@ -135,11 +136,21 @@ class Article(models.Model):
     status = models.BooleanField(default=0,
                                  choices=(map(lambda x: (bool(x[0]), x[1]), Status.choices)),
                                  verbose_name='Проверено')
+
     image = models.ImageField(
         upload_to='articles/%Y/%m/%d/',
         blank=True,
         null=True,
         verbose_name='Изображение'
+    )
+
+    author = models.ForeignKey(
+        get_user_model(),
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        default=None,
+        verbose_name=_('Автор')
     )
 
     objects = ArticleManager()

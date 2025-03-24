@@ -28,9 +28,14 @@
                         <small class="text-muted me-2">
                             <i class="bi bi-calendar"></i> {{ article.publication_date|date:"d.m.Y" }}
                         </small>
-                        <small class="text-muted">
+                        <small class="text-muted me-2">
                             <i class="bi bi-eye"></i> {{ article.views }}
                         </small>
+                        {% if article.author %}
+                        <small class="text-muted">
+                            <i class="bi bi-person"></i> {{ article.author.username }}
+                        </small>
+                        {% endif %}
                     </div>
                     <!-- Кнопки -->
                     <div class="d-flex">
@@ -53,15 +58,20 @@
                         </button>
                     </div>
                 </div>
-            {% else %}
-                <div class="d-flex mb-3">
-                    <small class="text-muted me-3">
-                        <i class="bi bi-calendar"></i> {{ article.publication_date|date:"d.m.Y" }}
-                    </small>
-                    <small class="text-muted">
-                        <i class="bi bi-eye"></i> {{ article.views }}
-                    </small>
-                </div>
+                {% else %}
+                    <div class="d-flex mb-3">
+                        <small class="text-muted me-3">
+                            <i class="bi bi-calendar"></i> {{ article.publication_date|date:"d.m.Y" }}
+                        </small>
+                        <small class="text-muted me-3">
+                            <i class="bi bi-eye"></i> {{ article.views }}
+                        </small>
+                        {% if article.author %}
+                        <small class="text-muted">
+                            <i class="bi bi-person"></i> {{ article.author.username }}
+                        </small>
+                        {% endif %}
+                    </div>
                 <!-- Кнопки -->
                 <div class="d-flex mb-3">
                     <!-- Кнопка избранного -->

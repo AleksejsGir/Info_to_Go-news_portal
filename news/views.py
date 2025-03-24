@@ -17,7 +17,7 @@ from django.urls import reverse_lazy
 from .models import Article, Tag, Category, Like, Favorite
 from .forms import ArticleForm, ArticleUploadForm
 from django.contrib import messages
-
+from django.contrib.auth import get_user_model
 
 # Класс для получения данных о категориях
 class CategoryService:
@@ -30,9 +30,10 @@ class CategoryService:
 class BaseMixin(ContextMixin):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        User = get_user_model()  # Получаем модель пользователя
         context.update({
-            "users_count": 5,
-            "news_count": Article.objects.count(),  # Используем метод count вместо len(all())
+            "users_count": User.objects.count(),  # Получаем реальное количество пользователей
+            "news_count": Article.objects.count(),
             "menu": [
                 {"title": "Главная",
                  "url": "/",
@@ -385,6 +386,10 @@ class ArticleCreateView(LoginRequiredMixin, BaseMixin, CreateView):
         article = form.save(commit=False)
         article.views = 0
         article.status = Article.Status.UNCHECKED
+
+        # Добавляем текущего пользователя как автора
+        article.author = self.request.user
+
         article.save()
         form.save_m2m()  # Сохраняем теги (many-to-many отношения)
 

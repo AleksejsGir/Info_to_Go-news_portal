@@ -143,6 +143,11 @@ MEDIA_ROOT = BASE_DIR / 'media'
 # Настройка URL для перенаправления при попытке доступа к защищенным страницам
 LOGIN_URL = 'users:login'
 
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',  # Стандартный бэкенд
+    'users.authentication.EmailAuthBackend',      # Мой кастомный бэкенд
+]
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
