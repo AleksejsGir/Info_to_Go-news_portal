@@ -5,23 +5,24 @@ from django.http import HttpResponse
 from django.shortcuts import redirect
 from django.urls import reverse_lazy
 from django.views.generic import CreateView, TemplateView
+from allauth.account.views import ConfirmEmailView
 
 from .forms import CustomAuthenticationForm, RegisterUserForm
 from news.views import BaseMixin
 
-
+# Оставляем существующие представления для обратной совместимости
 class LoginUser(BaseMixin, LoginView):
     """
     Представление для входа пользователя в систему.
     Использует стандартное Django-представление LoginView с нашими настройками.
     """
-    form_class = CustomAuthenticationForm  # Используем нашу кастомную форму
-    template_name = 'users/login.html'  # Путь к шаблону страницы входа
-    redirect_field_name = 'next'  # Параметр для перенаправления после успешного входа
+    form_class = CustomAuthenticationForm
+    template_name = 'users/login.html'
+    redirect_field_name = 'next'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['hide_sidebar'] = True  # Скрываем сайдбар
+        context['hide_sidebar'] = True
         return context
 
     def get_success_url(self):
@@ -33,14 +34,12 @@ class LoginUser(BaseMixin, LoginView):
         # Если параметра 'next' нет, перенаправляем в каталог новостей
         return reverse_lazy('news:catalog')
 
-
 class LogoutUser(LogoutView):
     """
     Представление для выхода пользователя из системы.
     Использует стандартное Django-представление LogoutView с указанием страницы перенаправления.
     """
-    next_page = reverse_lazy('users:login')
-
+    next_page = reverse_lazy('account_login')  # Перенаправляем на URL allauth
 
 class RegisterUser(CreateView):
     """
@@ -58,7 +57,6 @@ class RegisterUser(CreateView):
         })
         return context
 
-
 class RegisterDoneView(BaseMixin, TemplateView):
     """
     Представление для отображения страницы успешной регистрации.
@@ -70,3 +68,16 @@ class RegisterDoneView(BaseMixin, TemplateView):
         context['title'] = 'Регистрация завершена'
         context['hide_sidebar'] = True
         return context
+
+# Добавляем новое представление для django-allauth
+class CustomConfirmEmailView(ConfirmEmailView):
+    """
+    Кастомное представление для обработки подтверждения email.
+    Перенаправляет на страницу входа, если email уже подтвержден.
+    """
+    def get(self, *args, **kwargs):
+        response = super().get(*args, **kwargs)
+        # Проверяем, есть ли подтвержденные email у пользователя
+        if hasattr(self, 'object') and self.object.emailaddress_set.filter(verified=True).exists():
+            return redirect('account_login')  # Редирект на страницу входа
+        return response  # Возвращаем стандартный ответ

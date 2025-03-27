@@ -1,0 +1,17 @@
+{% load account %}
+{% load i18n %}
+
+{% autoescape off %}
+{% user_display user as user_display %}
+{% blocktrans with site_name=current_site.name site_domain=current_site.domain %}
+Здравствуйте!
+
+Вы получили это письмо, потому что пользователь {{ user_display }} указал этот email-адрес при регистрации на сайте {{ site_domain }}.
+
+Для подтверждения этого адреса электронной почты, пожалуйста, перейдите по ссылке ниже:
+{{ activate_url }}
+
+С уважением,
+Команда The Future Prism
+{% endblocktrans %}
+{% endautoescape %}

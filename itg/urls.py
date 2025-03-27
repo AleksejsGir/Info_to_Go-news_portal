@@ -10,7 +10,8 @@ urlpatterns = [
     path('', views.MainView.as_view(), name='index'),
     path('about/', views.AboutView.as_view(), name='about'),
     path('news/', include('news.urls')),
-    path('users/', include('users.urls')),  # Добавляем маршруты для приложения users
+    path('users/', include('users.urls')),  # Маршруты для приложения users
+    path('accounts/', include('allauth.urls')),  # Добавляем маршруты django-allauth
 ]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 if settings.DEBUG:
