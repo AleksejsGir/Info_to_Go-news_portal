@@ -6,6 +6,7 @@ from django.db.models import Q
 from django.contrib.auth import get_user_model
 from django.utils.translation import gettext_lazy as _
 
+
 class ArticleQuerySet(models.QuerySet):
     """Расширенный QuerySet для статей с дополнительными методами запросов"""
 
@@ -81,17 +82,21 @@ class AllArticleManager(models.Manager):
 class FavoriteManager(models.Manager):
     """Менеджер для модели Favorite"""
 
-    def get_favorites_for_ip(self, ip_address):
-        """Получает ID статей, добавленных в избранное с заданного IP"""
-        return self.filter(ip_address=ip_address).values_list('article_id', flat=True)
+    def get_favorites_for_user(self, user):
+        """Получает ID статей, добавленных в избранное указанным пользователем"""
+        if not user or not user.is_authenticated:
+            return []
+        return self.filter(user=user).values_list('article_id', flat=True)
 
 
 class LikeManager(models.Manager):
     """Менеджер для модели Like"""
 
-    def get_likes_for_ip(self, ip_address):
-        """Получает ID статей, лайкнутых с заданного IP"""
-        return self.filter(ip_address=ip_address).values_list('article_id', flat=True)
+    def get_likes_for_user(self, user):
+        """Получает ID статей, лайкнутых указанным пользователем"""
+        if not user or not user.is_authenticated:
+            return []
+        return self.filter(user=user).values_list('article_id', flat=True)
 
 
 class Category(models.Model):
@@ -108,7 +113,7 @@ class Category(models.Model):
 
 
 class Tag(models.Model):
-    name = models.CharField( unique=True, verbose_name='Тег')
+    name = models.CharField(unique=True, verbose_name='Тег')
 
     def __str__(self):
         return self.name
@@ -170,16 +175,22 @@ class Article(models.Model):
         # Один вызов save вместо двух
         super().save(*args, **kwargs)
 
-    def toggle_like(self, ip_address):
-        """Переключает состояние лайка для данного IP-адреса"""
-        like, created = self.likes.get_or_create(ip_address=ip_address)
+    def toggle_like(self, user):
+        """Переключает состояние лайка для данного пользователя"""
+        if not user or not user.is_authenticated:
+            return False, self.likes.count()
+
+        like, created = self.likes.get_or_create(user=user)
         if not created:
             like.delete()
         return created, self.likes.count()
 
-    def toggle_favorite(self, ip_address):
-        """Переключает состояние избранного для данного IP-адреса"""
-        favorite, created = self.favorites.get_or_create(ip_address=ip_address)
+    def toggle_favorite(self, user):
+        """Переключает состояние избранного для данного пользователя"""
+        if not user or not user.is_authenticated:
+            return False, self.favorites.count()
+
+        favorite, created = self.favorites.get_or_create(user=user)
         if not created:
             favorite.delete()
         return created, self.favorites.count()
@@ -189,13 +200,17 @@ class Article(models.Model):
         self.views += 1
         self.save(update_fields=['views'])
 
-    def is_liked_by_ip(self, ip_address):
-        """Проверяет, лайкнута ли статья с данного IP"""
-        return self.likes.filter(ip_address=ip_address).exists()
+    def is_liked_by_user(self, user):
+        """Проверяет, лайкнута ли статья пользователем"""
+        if not user or not user.is_authenticated:
+            return False
+        return self.likes.filter(user=user).exists()
 
-    def is_favorite_for_ip(self, ip_address):
-        """Проверяет, добавлена ли статья в избранное с данного IP"""
-        return self.favorites.filter(ip_address=ip_address).exists()
+    def is_favorite_for_user(self, user):
+        """Проверяет, добавлена ли статья в избранное пользователем"""
+        if not user or not user.is_authenticated:
+            return False
+        return self.favorites.filter(user=user).exists()
 
     class Meta:
         db_table = 'Articles'
@@ -209,8 +224,8 @@ class Article(models.Model):
 
 class Like(models.Model):
     """
-    Модель для хранения лайков к статьям
-    Каждый IP может лайкнуть статью только один раз
+    Модель для хранения лайков к статьям.
+    Лайки доступны только авторизованным пользователям.
     """
     article = models.ForeignKey(
         Article,
@@ -218,7 +233,13 @@ class Like(models.Model):
         related_name='likes',
         verbose_name='Статья'
     )
-    ip_address = models.GenericIPAddressField(verbose_name='IP-адрес')
+    user = models.ForeignKey(
+        get_user_model(),
+        on_delete=models.CASCADE,
+        related_name='user_likes',
+        verbose_name='Пользователь'
+
+    )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Время лайка')
 
     objects = LikeManager()
@@ -227,16 +248,16 @@ class Like(models.Model):
         db_table = 'Likes'
         verbose_name = 'Лайк'
         verbose_name_plural = 'Лайки'
-        unique_together = ('article', 'ip_address')  # Уникальность лайка
+        unique_together = ('article', 'user')  # Каждый пользователь может лайкнуть статью только один раз
 
     def __str__(self):
-        return f"Лайк статьи {self.article.title}"
+        return f"Лайк статьи {self.article.title} от {self.user.username}"
 
 
 class Favorite(models.Model):
     """
-    Модель для хранения избранных статей
-    Каждый IP может добавить статью в избранное только один раз
+    Модель для хранения избранных статей.
+    Добавление в избранное доступно только авторизованным пользователям.
     """
     article = models.ForeignKey(
         Article,
@@ -244,7 +265,14 @@ class Favorite(models.Model):
         related_name='favorites',
         verbose_name='Статья'
     )
-    ip_address = models.GenericIPAddressField(verbose_name='IP-адрес')
+    user = models.ForeignKey(
+        get_user_model(),
+        on_delete=models.CASCADE,
+        related_name='user_favorites',
+        verbose_name='Пользователь'
+
+
+    )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Время добавления')
 
     objects = FavoriteManager()
@@ -253,7 +281,7 @@ class Favorite(models.Model):
         db_table = 'Favorites'
         verbose_name = 'Избранное'
         verbose_name_plural = 'Избранное'
-        unique_together = ('article', 'ip_address')  # Уникальность избранного
+        unique_together = ('article', 'user')  # Каждый пользователь может добавить статью в избранное только один раз
 
     def __str__(self):
-        return f"Избранная статья {self.article.title}"
+        return f"Избранная статья {self.article.title} пользователя {self.user.username}"

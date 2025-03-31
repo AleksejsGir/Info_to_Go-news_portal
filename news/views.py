@@ -11,7 +11,6 @@ from django.views.generic import (
     ListView, DetailView, TemplateView, View,
     FormView, CreateView, UpdateView, DeleteView
 )
-from django.views.generic.base import ContextMixin
 from django.urls import reverse_lazy
 
 from .models import Article, Tag, Category, Like, Favorite
@@ -26,32 +25,11 @@ class CategoryService:
         return Category.objects.annotate(news_count=Count('article')).order_by('name')
 
 
-# Создаем миксин для добавления навигационного меню во все представления
-class BaseMixin(ContextMixin):
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        User = get_user_model()  # Получаем модель пользователя
-        context.update({
-            "users_count": User.objects.count(),  # Получаем реальное количество пользователей
-            "news_count": Article.objects.count(),
-            "menu": [
-                {"title": "Главная",
-                 "url": "/",
-                 "url_name": "index"},
-                {"title": "О проекте",
-                 "url": "/about/",
-                 "url_name": "about"},
-                {"title": "Каталог",
-                 "url": "/news/catalog/",
-                 "url_name": "news:catalog"},  # Обновлено для использования пространства имён
-            ],
-            'categories_list': CategoryService.get_categories_with_count(),
-        })
-        return context
+# Удаляем BaseMixin, так как теперь используем контекстный процессор
 
 
 # 14. Выносим общую логику списка статей в отдельный класс
-class BaseArticleListView(BaseMixin, ListView):
+class BaseArticleListView(ListView):
     """
     Базовый класс для всех представлений, отображающих списки статей.
     Содержит общую логику и настройки для дочерних классов.
@@ -87,12 +65,12 @@ class BaseArticleListView(BaseMixin, ListView):
 
 
 # 1. Переписать about на TemplateView
-class AboutView(BaseMixin, TemplateView):
+class AboutView(TemplateView):
     template_name = 'about.html'
 
 
 # Также добавим представление для главной страницы
-class MainView(BaseMixin, TemplateView):
+class MainView(TemplateView):
     template_name = 'main.html'
 
 
@@ -138,31 +116,25 @@ class TagNewsListView(BaseArticleListView):
 
 
 # 15. Выносим повторяющийся код toggle-логики в отдельный класс
-class BaseToggleView(View):
+# Обновление класса BaseToggleView
+class BaseToggleView(LoginRequiredMixin, View):
     """
     Базовый класс для представлений с логикой переключения состояния (лайки, избранное)
+    Доступно только авторизованным пользователям
     """
-    model = None  # Модель для работы (Like или Favorite)
-    session_key = None  # Ключ в сессии ('liked_articles' или 'favorite_articles')
-    response_field = None  # Название поля в JSON-ответе ('liked' или 'is_favorite')
-    count_field = None  # Название поля для счетчика в JSON-ответе ('likes_count' или 'favorites_count')
-    toggle_method = None  # Метод модели Article для переключения состояния
+    model = None
+    response_field = None
+    count_field = None
+    toggle_method = None
 
-    @method_decorator(csrf_protect)
     def post(self, request, article_id):
         try:
             # Получаем статью или возвращаем 404
             article = get_object_or_404(Article, id=article_id)
 
-            # Получаем IP-адрес клиента
-            ip_address = request.META.get('REMOTE_ADDR')
-
             # Используем метод модели для переключения состояния
             method = getattr(article, self.toggle_method)
-            is_active, count = method(ip_address)
-
-            # Обновляем сессию
-            self._update_session(request, article.id, is_active)
+            is_active, count = method(request.user)
 
             # Формируем ответ
             response_data = {
@@ -176,20 +148,6 @@ class BaseToggleView(View):
             # Логируем возможные ошибки
             print(f"Ошибка при обработке toggle: {e}")
             return JsonResponse({'error': str(e)}, status=400)
-
-    def _update_session(self, request, article_id, is_active):
-        """Обновляет сессию с учетом состояния (добавлено/удалено)"""
-        # Создаем список в сессии, если его нет
-        if self.session_key not in request.session:
-            request.session[self.session_key] = []
-
-        # Обновляем список в сессии
-        if is_active and article_id not in request.session[self.session_key]:
-            request.session[self.session_key].append(article_id)
-            request.session.modified = True
-        elif not is_active and article_id in request.session[self.session_key]:
-            request.session[self.session_key].remove(article_id)
-            request.session.modified = True
 
 
 # 4. Переписать toggle_favorite на View
@@ -213,7 +171,7 @@ class ToggleLikeView(BaseToggleView):
 
 
 # 6. Переписать upload_json_view на FormView
-class UploadJsonView(LoginRequiredMixin, BaseMixin, FormView):
+class UploadJsonView(LoginRequiredMixin, FormView):
     template_name = 'news/upload_json.html'
     form_class = ArticleUploadForm
     success_url = reverse_lazy('news:edit_article_from_json')
@@ -281,15 +239,13 @@ class SearchNewsView(BaseArticleListView):
 
 
 # 8. Переписать favorites на ListView
+# Обновление класса FavoriteNewsListView
 class FavoriteNewsListView(LoginRequiredMixin, BaseArticleListView):
     template_name = 'news/favorites.html'
 
     def get_queryset(self):
-        # Получаем IP-адрес клиента
-        ip_address = self.request.META.get('REMOTE_ADDR')
-
-        # Используем метод менеджера для получения ID избранных статей
-        favorite_articles = Favorite.objects.get_favorites_for_ip(ip_address)
+        # Получаем избранные статьи для текущего пользователя
+        favorite_articles = Favorite.objects.get_favorites_for_user(self.request.user)
 
         # Получаем базовый queryset с сортировкой и применяем фильтр
         return super().get_queryset().filter(id__in=favorite_articles)
@@ -301,7 +257,7 @@ class FavoriteNewsListView(LoginRequiredMixin, BaseArticleListView):
 
 
 # Базовый класс для детального просмотра статей
-class BaseArticleDetailView(BaseMixin, DetailView):
+class BaseArticleDetailView(DetailView):
     """
     Базовый класс для детального просмотра статьи с инкрементом счетчика просмотров
     """
@@ -341,41 +297,27 @@ class ArticleDetailBySlugView(BaseArticleDetailView):
 
 
 # Представление для детальной страницы статьи по ID
+# Обновление класса ArticleDetailView
 class ArticleDetailView(BaseArticleDetailView):
     pk_url_kwarg = 'article_id'
 
-    def get(self, request, *args, **kwargs):
-        # Вызываем родительский метод, который уже увеличивает счетчик просмотров
-        response = super().get(request, *args, **kwargs)
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
         article = self.get_object()
 
-        # Получаем IP-адрес и проверяем статус лайка
-        ip_address = request.META.get('REMOTE_ADDR')
-        is_liked = article.is_liked_by_ip(ip_address)
+        # Добавляем в контекст информацию о лайке и избранном для текущего пользователя
+        if self.request.user.is_authenticated:
+            context['is_liked'] = article.is_liked_by_user(self.request.user)
+            context['is_favorite'] = article.is_favorite_for_user(self.request.user)
+        else:
+            context['is_liked'] = False
+            context['is_favorite'] = False
 
-        # Синхронизируем сессию с базой данных
-        self._sync_liked_status_with_session(request, article.id, is_liked)
-
-        return response
-
-    def _sync_liked_status_with_session(self, request, article_id, is_liked):
-        """Синхронизирует состояние лайка между БД и сессией"""
-        # Инициализируем сессию, если нужно
-        if 'liked_articles' not in request.session:
-            request.session['liked_articles'] = []
-
-        # Обновляем сессию в соответствии с состоянием в БД
-        liked_articles = request.session['liked_articles']
-        if is_liked and article_id not in liked_articles:
-            liked_articles.append(article_id)
-            request.session.modified = True
-        elif not is_liked and article_id in liked_articles:
-            liked_articles.remove(article_id)
-            request.session.modified = True
+        return context
 
 
 # 10. Переписать add_article на CreateView
-class ArticleCreateView(LoginRequiredMixin, BaseMixin, CreateView):
+class ArticleCreateView(LoginRequiredMixin, CreateView):
     model = Article
     form_class = ArticleForm
     template_name = 'news/add_article.html'
@@ -397,7 +339,7 @@ class ArticleCreateView(LoginRequiredMixin, BaseMixin, CreateView):
 
 
 # 11. Переписать article_update на UpdateView
-class ArticleUpdateView(LoginRequiredMixin, BaseMixin, UpdateView):
+class ArticleUpdateView(LoginRequiredMixin, UpdateView):
     model = Article
     form_class = ArticleForm
     template_name = 'news/edit_article.html'
@@ -409,7 +351,7 @@ class ArticleUpdateView(LoginRequiredMixin, BaseMixin, UpdateView):
 
 
 # 12. Переписать article_delete на DeleteView
-class ArticleDeleteView(LoginRequiredMixin, BaseMixin, DeleteView):
+class ArticleDeleteView(LoginRequiredMixin, DeleteView):
     model = Article
     template_name = 'news/delete_article.html'
     success_url = reverse_lazy('news:catalog')
@@ -418,7 +360,7 @@ class ArticleDeleteView(LoginRequiredMixin, BaseMixin, DeleteView):
 
 
 # 13. Преобразуем функцию edit_article_from_json в класс
-class EditArticleFromJsonView(LoginRequiredMixin, BaseMixin, View):
+class EditArticleFromJsonView(LoginRequiredMixin, View):
     def get(self, request):
         # Проверяем наличие данных в сессии
         if 'json_articles' not in request.session:
