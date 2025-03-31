@@ -1,0 +1,74 @@
+/* static/news/css/auth_forms.css */
+
+/* Стили для карточки аутентификации */
+.auth-card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    transition: all 0.3s ease;
+    margin-bottom: 30px;
+}
+
+.auth-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
+}
+
+.auth-card .card-header {
+    padding: 15px 20px;
+    border-bottom: none;
+}
+
+.auth-card .card-body {
+    padding: 30px;
+}
+
+/* Стили для заголовков */
+.auth-card .card-header h3 {
+    margin: 0;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+/* Стили для полей ввода */
+.auth-form .form-control {
+    border-radius: 8px;
+    padding: 12px 15px;
+    border: 1px solid #ced4da;
+    transition: all 0.2s ease;
+    background-color: #f8f9fa;
+    font-size: 16px;
+}
+
+.auth-form .form-control:focus {
+    background-color: #fff;
+    border-color: #80bdff;
+    box-shadow: 0 0 0 0.25rem rgba(0, 123, 255, 0.25);
+}
+
+/* Стили для кнопок */
+.auth-form .btn {
+    padding: 10px 20px;
+    font-weight: 600;
+    border-radius: 8px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+
+.auth-form .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+}
+
+/* Анимация для формы при загрузке */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.auth-card {
+    animation: fadeIn 0.5s ease forwards;
+}

@@ -10,6 +10,7 @@ def user_context(request):
     Включает:
     - is_authentication_page: определяет, находится ли пользователь на странице аутентификации
     - available_social_providers: список доступных методов социальной аутентификации
+    - hide_sidebar: скрывать ли боковую панель с категориями (True для страниц аутентификации)
     """
     # Определяем, находится ли пользователь на странице аутентификации
     auth_paths = [
@@ -17,6 +18,8 @@ def user_context(request):
         '/accounts/signup/',
         '/accounts/password/reset/',
         '/accounts/confirm-email/',
+        '/accounts/password/reset/key/',  # Добавлен путь для страницы сброса пароля
+        '/accounts/email/',               # Добавлен путь для страницы управления email
     ]
 
     is_auth_page = any(request.path.startswith(path) for path in auth_paths)
@@ -26,6 +29,7 @@ def user_context(request):
 
     return {
         'is_authentication_page': is_auth_page,
+        'hide_sidebar': is_auth_page,     # Добавлена эта строка - скрывать сайдбар на страницах аутентификации
         'available_social_providers': list(social_providers),
         'auth_menu': [
             {"title": "Вход", "url": "/accounts/login/", "url_name": "account_login", "logged_out_only": True},

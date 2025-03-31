@@ -1,69 +1,120 @@
 # users/forms.py
 from django import forms
-from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
-from allauth.account.forms import SignupForm, LoginForm
+from allauth.account.forms import SignupForm, LoginForm, ResetPasswordForm, EmailAddress
 
 User = get_user_model()
 
-# Оставляем существующие формы для обратной совместимости
-class CustomAuthenticationForm(AuthenticationForm):
-    """
-    Кастомная форма аутентификации с стилями Bootstrap 5.
-    Поддерживает вход как по имени пользователя, так и по email.
-    """
-    username = forms.CharField(
-        label='Логин или Email',
-        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Введите имя пользователя или email'})
-    )
-    password = forms.CharField(
-        label='Пароль',
-        widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Введите пароль'})
-    )
 
-class RegisterUserForm(UserCreationForm):
+class ResendVerificationEmailForm(forms.Form):
     """
-    Форма для регистрации новых пользователей.
-    Наследуется от UserCreationForm, который предоставляет базовую валидацию паролей.
+    Форма для повторной отправки письма подтверждения email
+
+    Ключевые особенности:
+    - Валидация существования незавершенной регистрации
+    - Стилизация под Bootstrap
+    - Информативные сообщения об ошибках
     """
     email = forms.EmailField(
-        label='Email',
-        widget=forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'Введите email'})
+        label='Email для подтверждения',
+        widget=forms.EmailInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Введите email для повторной отправки',
+            'autofocus': 'autofocus'
+        })
     )
-
-    # Переопределяем поля, чтобы добавить стили Bootstrap
-    username = forms.CharField(
-        label='Имя пользователя',
-        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Введите имя пользователя'})
-    )
-
-    first_name = forms.CharField(
-        label='Имя',
-        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Введите имя'}),
-        required=False
-    )
-
-    password1 = forms.CharField(
-        label='Пароль',
-        widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Введите пароль'})
-    )
-
-    password2 = forms.CharField(
-        label='Подтверждение пароля',
-        widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Повторите пароль'})
-    )
-
-    class Meta:
-        model = User
-        fields = ('username', 'email', 'first_name', 'password1', 'password2')
 
     def clean_email(self):
-        """Проверка email на уникальность"""
-        email = self.cleaned_data['email']
-        if User.objects.filter(email=email).exists():
-            raise ValidationError("Пользователь с таким email уже существует")
+        """
+        Проверка корректности email и статуса подтверждения
+        """
+        email = self.cleaned_data.get('email')
+
+        # Проверяем существование email-адреса в системе
+        try:
+            email_address = EmailAddress.objects.get(email=email)
+
+            # Проверяем, что email еще не подтвержден
+            if email_address.verified:
+                raise forms.ValidationError(
+                    "Указанный email уже подтвержден. Вы можете войти в систему."
+                )
+
+        except EmailAddress.DoesNotExist:
+            raise forms.ValidationError(
+                "Пользователь с указанным email не найден. Проверьте правильность ввода."
+            )
+
         return email
+
+
+class CustomResetPasswordForm(ResetPasswordForm):
+    """
+    Кастомная форма сброса пароля с улучшенной стилизацией и валидацией
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Настройка поля email
+        self.fields['email'].widget = forms.EmailInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Введите ваш зарегистрированный email',
+            'autofocus': 'autofocus'
+        })
+        self.fields['email'].label = 'Email для восстановления'
+
+    def clean_email(self):
+        """
+        Валидация email с информативными сообщениями
+        """
+        email = self.cleaned_data['email']
+
+        User = get_user_model()
+
+        # Находим пользователей с указанным email
+        self.users = User.objects.filter(email=email)
+
+        # Проверяем существование email в базе
+        if not self.users.exists():
+            raise forms.ValidationError(
+                "Пользователь с таким email не зарегистрирован. "
+                "Проверьте правильность введенного адреса."
+            )
+
+        return email
+
+class CustomAuthenticationForm(LoginForm):  # Наследуемся от LoginForm allauth
+    """
+    Кастомная форма аутентификации с расширенным функционалом.
+    Поддерживает вход по email или логину с улучшенными стилями Bootstrap 5.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Кастомизация поля логина
+        self.fields['login'].widget = forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Введите email или имя пользователя',
+            'autofocus': 'autofocus'  # Устанавливаем фокус на это поле при загрузке
+        })
+        self.fields['login'].label = 'Логин или Email'
+
+        # Кастомизация поля пароля
+        self.fields['password'].widget = forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Введите пароль',
+            'autocomplete': 'current-password'  # Улучшаем автозаполнение
+        })
+        self.fields['password'].label = 'Пароль'
+
+        # Добавляем возможность запоминания пользователя
+        self.fields['remember'].widget = forms.CheckboxInput(attrs={
+            'class': 'form-check-input'
+        })
+
 
 # Добавляем новую форму для django-allauth
 class CustomSignupForm(SignupForm):
