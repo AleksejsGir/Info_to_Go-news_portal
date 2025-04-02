@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+
+{% block title %}Управление Email-адресами{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card auth-card shadow mb-5">
+            <div class="card-header bg-primary text-white">
+                <h3 class="my-2 text-center">Управление Email-адресами</h3>
+            </div>
+            <div class="card-body p-4">
+                {% if user.emailaddress_set.all %}
+                <p class="mb-4">Следующие email-адреса связаны с вашей учетной записью:</p>
+                <form action="{% url 'account_email' %}" method="post" class="auth-form">
+                    {% csrf_token %}
+                    <fieldset class="mb-4">
+                        {% for emailaddress in user.emailaddress_set.all %}
+                        <div class="form-check mb-3 p-3 border rounded{% if emailaddress.primary %} bg-light{% endif %}">
+                            <input id="email_radio_{{ forloop.counter }}" type="radio" name="email"
+                                   class="form-check-input"
+                                   {% if emailaddress.primary or user.emailaddress_set.count == 1 %}checked="checked"{% endif %}
+                                   value="{{ emailaddress.email }}">
+                            <label for="email_radio_{{ forloop.counter }}" class="form-check-label fw-bold">
+                                {{ emailaddress.email }}
+                            </label>
+                            <div class="mt-2">
+                                {% if emailaddress.verified %}
+                                <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Подтвержден</span>
+                                {% else %}
+                                <span class="badge bg-warning text-dark"><i class="bi bi-exclamation-triangle me-1"></i>Не подтвержден</span>
+                                {% endif %}
+                                {% if emailaddress.primary %}
+                                <span class="badge bg-primary"><i class="bi bi-star me-1"></i>Основной</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </fieldset>
+                    <div class="btn-group w-100 mb-4">
+                        <button type="submit" name="action_primary" class="btn btn-outline-primary">
+                            <i class="bi bi-star me-2"></i>Сделать основным
+                        </button>
+                        <button type="submit" name="action_send" class="btn btn-outline-info">
+                            <i class="bi bi-envelope me-2"></i>Отправить подтверждение
+                        </button>
+                        <button type="submit" name="action_remove" class="btn btn-outline-danger">
+                            <i class="bi bi-trash me-2"></i>Удалить
+                        </button>
+                    </div>
+                </form>
+                {% else %}
+                <div class="alert alert-warning" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    У вас нет зарегистрированных email-адресов. Добавьте хотя бы один, чтобы иметь возможность входа в систему.
+                </div>
+                {% endif %}
+
+                <hr class="my-4">
+
+                <h4 class="mb-3">Добавить Email</h4>
+                <form method="post" action="{% url 'account_email' %}" class="auth-form">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="id_email" class="form-label">
+                            <i class="bi bi-envelope-fill me-2"></i>Email
+                        </label>
+                        <input type="email" name="email" id="id_email" class="form-control" placeholder="Введите новый email">
+                    </div>
+                    <div class="d-grid">
+                        <button name="action_add" type="submit" class="btn btn-success">
+                            <i class="bi bi-plus-circle me-2"></i>Добавить Email
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript для управления формой email-адресов -->
+<script type="text/javascript">
+(function() {
+  var message = "Вы уверены, что хотите удалить выбранный email-адрес?";
+  var actions = document.getElementsByName('action_remove');
+  if (actions.length) {
+    actions[0].addEventListener("click", function(e) {
+      if (! confirm(message)) {
+        e.preventDefault();
+      }
+    });
+  }
+})();
+</script>
+{% endblock %}

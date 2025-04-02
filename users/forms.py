@@ -71,8 +71,6 @@ class CustomResetPasswordForm(ResetPasswordForm):
         """
         email = self.cleaned_data['email']
 
-        User = get_user_model()
-
         # Находим пользователей с указанным email
         self.users = User.objects.filter(email=email)
 
@@ -84,6 +82,7 @@ class CustomResetPasswordForm(ResetPasswordForm):
             )
 
         return email
+
 
 class CustomAuthenticationForm(LoginForm):  # Наследуемся от LoginForm allauth
     """

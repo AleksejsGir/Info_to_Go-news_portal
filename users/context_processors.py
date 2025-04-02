@@ -19,7 +19,9 @@ def user_context(request):
         '/accounts/password/reset/',
         '/accounts/confirm-email/',
         '/accounts/password/reset/key/',  # Добавлен путь для страницы сброса пароля
-        '/accounts/email/',               # Добавлен путь для страницы управления email
+        '/accounts/email/',  # Добавлен путь для страницы управления email
+        '/accounts/password/change/',  # Путь для страницы изменения пароля
+        '/accounts/password/change/done/'  # Путь для страницы успешного изменения пароля
     ]
 
     is_auth_page = any(request.path.startswith(path) for path in auth_paths)

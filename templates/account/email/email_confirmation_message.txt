@@ -1,0 +1,13 @@
+{% load account %}
+{% user_display user as user_display %}
+{% autoescape off %}
+Здравствуйте!
+
+Вы получили это письмо, потому что пользователь {{ user_display }} указал этот email-адрес при регистрации на сайте {{ current_site.domain }}.
+
+Для подтверждения этого адреса электронной почты, пожалуйста, перейдите по ссылке ниже:
+{{ activate_url }}
+
+С уважением,
+Команда сайта {{ current_site.name }}
+{% endautoescape %}
