@@ -11,8 +11,13 @@
       integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
       crossorigin="anonymous"
     />
-    <!-- Добавляем Bootstrap Icons для корректного отображения иконок -->
+    <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <!-- Custom styles -->
     <link rel="stylesheet" href="{% static 'news/css/main.css' %}">
     <link rel="stylesheet" href="{% static 'news/css/auth_forms.css' %}">
   </head>
@@ -20,7 +25,7 @@
     <header>
         <nav class="navbar navbar-expand-lg navbar-dark">
             <div class="container-fluid">
-                <a class="navbar-brand" href="#">Info to Go</a>
+                <a class="navbar-brand" href="{% url 'index' %}">Info to Go</a>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
                 </button>
@@ -32,17 +37,15 @@
                         <!-- Форма поиска -->
                         <form method="GET" action="{% url 'news:search_news' %}" class="d-flex me-3">
                             <input
-                                class="form-control me-2"
+                                class="form-control search-input me-2"
                                 type="search"
                                 placeholder="Поиск новостей"
                                 aria-label="Search"
                                 name="q"
-                                style="background-color: #495057; color: #ffffff; border: none;"
                             >
                             <button
-                                class="btn btn-outline-light"
+                                class="btn search-button"
                                 type="submit"
-                                style="background-color: #6c757d; color: #ffffff;"
                             >
                                 Найти
                             </button>
@@ -74,7 +77,9 @@
     </main>
     <footer class="footer mt-5">
         {% block footer %}
-            <p>Этот текст будет выведен, если в наследуемом шаблоне нет подстановки</p>
+            <div class="container py-3">
+                <p class="mb-0">© {% now "Y" %} Info to Go. Все права защищены.</p>
+            </div>
         {% endblock %}
     </footer>
 

@@ -1,9 +1,14 @@
 {% extends "base.html" %}
 {% load upper_words %}
-{% load user_extras %}  {# Добавляем наши пользовательские фильтры #}
+{% load user_extras %}
 
 {% block content %}
-    <div class="card">
+<div class="article-container">
+    <!-- Заголовок статьи с улучшенным стилем -->
+    <h1 class="title-3d mb-4">{% upper_words article.title %}</h1>
+
+    <!-- Основная карточка статьи -->
+    <div class="card mb-4">
         <div class="card-body">
             {% if article.image %}
                 <img
@@ -13,87 +18,108 @@
                 >
             {% endif %}
 
-            <h5 class="card-title">{% upper_words article.title %}</h5>
+            <!-- Мета-информация в верхней части -->
+            <div class="article-meta mb-4 p-3 bg-light rounded">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="d-flex align-items-center">
+                            <a href="{% url 'news:news_by_category' article.category.id %}" class="badge bg-primary text-white text-decoration-none me-2">
+                                <i class="bi bi-folder"></i> {{ article.category }}
+                            </a>
 
-            <p class="card-text">{{ article.content }}</p>
-
-            <p class="card-text">
-                <a href="{% url 'news:news_by_category' article.category.id %}" class="text-decoration-none">
-                    {{ article.category }}
-                </a>
-            </p>
-
-            <div class="mb-3">
-                {% for tag in article.tags.all %}
-                    <a href="{% url 'news:news_by_tag' tag.id %}" class="badge bg-info text-decoration-none me-1">
-                        {{ tag }}
-                    </a>
-                {% endfor %}
-            </div>
-
-            {% if article.author %}
-                <p class="card-text">
-                    <i class="bi bi-person"></i> Автор: {{ article.author.username }}
-                </p>
-            {% endif %}
-
-            <div class="mt-3 d-flex justify-content-between align-items-center">
-                <div>
-                    <small class="text-muted me-3">
-                        <i class="bi bi-calendar"></i> {{ article.publication_date|date:"d.m.Y" }}
-                    </small>
-                    <small class="text-muted me-3">
-                        <i class="bi bi-eye"></i> {{ article.views }} просмотров
-                    </small>
-                    {% if article.favorites_count != None %}
-                        <small class="text-muted">
-                            <i class="bi bi-heart"></i> {{ article.favorites_count }} в избранном
-                        </small>
-                    {% endif %}
-                </div>
-
-                <div class="d-flex align-items-center">
-                    <!-- Кнопка избранного показываем только авторизованным пользователям -->
-                    {% if user.is_authenticated %}
-                    <button
-                        class="btn btn-outline-warning favorite-button me-2"
-                        data-article-id="{{ article.id }}"
-                    >
-                        <i class="bi bi-bookmark{% if request.session.favorite_articles and article.id in request.session.favorite_articles %}-fill{% endif %}"></i>
-                        <span class="favorites-count">{{ article.favorites.count }}</span>
-                    </button>
-
-                    <!-- Кнопка лайка -->
-                    <button
-                        class="btn btn-outline-danger like-button me-2"
-                        data-article-id="{{ article.id }}"
-                    >
-                        <i class="bi bi-heart{% if request.session.liked_articles and article.id in request.session.liked_articles %} text-danger{% endif %}"></i>
-                        <span class="likes-count">{{ article.likes.count }}</span>
-                    </button>
-                    {% endif %}
-
-                    <!-- Кнопки управления статьей - только для автора, модератора или админа -->
-                    {% if article|can_edit:user %}
-                    <div class="btn-group" role="group">
-                        <a href="{% url 'news:article_update' article.id %}"
-                            class="btn btn-warning btn-sm">
-                            <i class="bi bi-pencil"></i> Редактировать
-                        </a>
-
-                        <a href="{% url 'news:article_delete' article.id %}"
-                            class="btn btn-danger btn-sm">
-                            <i class="bi bi-trash"></i> Удалить
-                        </a>
+                            <span class="text-muted ms-2">
+                                <i class="bi bi-calendar"></i> {{ article.publication_date|date:"d.m.Y" }}
+                            </span>
+                        </div>
                     </div>
-                    {% endif %}
+                    <div class="col-md-6 text-md-end mt-2 mt-md-0">
+                        <span class="text-muted me-3">
+                            <i class="bi bi-eye"></i> {{ article.views }} просмотров
+                        </span>
+                        {% if article.favorites_count != None %}
+                            <span class="text-muted">
+                                <i class="bi bi-heart"></i> {{ article.favorites_count }} в избранном
+                            </span>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
-            <!-- Добавляем кнопку возврата к списку новостей -->
-            <div class="mt-4">
-                <a href="{% url 'news:catalog' %}" class="btn btn-outline-primary">
+
+            <!-- Содержание статьи -->
+            <div class="article-content">
+                <p class="card-text">{{ article.content }}</p>
+            </div>
+
+            <!-- Теги и автор -->
+            <div class="section-divider my-4"></div>
+
+            <div class="article-footer">
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="mb-3">
+                            <strong class="d-block mb-2">Теги:</strong>
+                            {% for tag in article.tags.all %}
+                                <a href="{% url 'news:news_by_tag' tag.id %}" class="badge bg-info text-decoration-none me-1">
+                                    {{ tag }}
+                                </a>
+                            {% empty %}
+                                <span class="text-muted">Нет тегов</span>
+                            {% endfor %}
+                        </div>
+
+                        {% if article.author %}
+                            <p class="card-text">
+                                <i class="bi bi-person"></i> Автор: {{ article.author.username }}
+                            </p>
+                        {% endif %}
+                    </div>
+
+                    <div class="col-md-4">
+                        <div class="d-flex justify-content-md-end align-items-center mt-3 mt-md-0">
+                            <!-- Кнопки для авторизованных пользователей -->
+                            {% if user.is_authenticated %}
+                                <button
+                                    class="btn btn-outline-warning favorite-button me-2"
+                                    data-article-id="{{ article.id }}"
+                                >
+                                    <i class="bi bi-bookmark{% if request.session.favorite_articles and article.id in request.session.favorite_articles %}-fill{% endif %}"></i>
+                                    <span class="favorites-count">{{ article.favorites.count }}</span>
+                                </button>
+
+                                <button
+                                    class="btn btn-outline-danger like-button me-2"
+                                    data-article-id="{{ article.id }}"
+                                >
+                                    <i class="bi bi-heart{% if request.session.liked_articles and article.id in request.session.liked_articles %} text-danger{% endif %}"></i>
+                                    <span class="likes-count">{{ article.likes.count }}</span>
+                                </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Кнопки управления в отдельной карточке -->
+    <div class="card action-card mb-4">
+        <div class="card-body">
+            <div class="d-flex flex-wrap justify-content-between align-items-center">
+                <a href="{% url 'news:catalog' %}" class="btn btn-outline-primary mb-2 mb-md-0">
                     <i class="bi bi-arrow-left"></i> К списку новостей
                 </a>
+
+                {% if article|can_edit:user %}
+                <div class="btn-group" role="group">
+                    <a href="{% url 'news:article_update' article.id %}" class="btn btn-warning btn-sm">
+                        <i class="bi bi-pencil"></i> Редактировать
+                    </a>
+
+                    <a href="{% url 'news:article_delete' article.id %}" class="btn btn-danger btn-sm">
+                        <i class="bi bi-trash"></i> Удалить
+                    </a>
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>

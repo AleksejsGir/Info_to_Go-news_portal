@@ -6,17 +6,101 @@
 {% block title %}Каталог новостей Info to Go{% endblock %}
 
 {% block content %}
-    <h1 class="text-center mb-4">Каталог новостей Info to Go</h1>
-    <p class="text-center">Всего новостей: {{ news_count }}</p>
-    <p class="text-center">Всего пользователей: {{ users_count }}</p>
-    <div class="row g-4">
-        {% for article in news %}
-            <div class="col-md-6">
-                {% include "include/article_preview.html" with article=article truncate_length=50 use_tag_margin=True use_formatted_meta=True %}
+    <!-- Обновленный заголовок с интерактивными элементами -->
+    <div class="catalog-header interactive-header mb-5">
+        <div class="gradient-primary py-4 mb-4">
+            <h1 class="title-3d mb-3">Каталог новостей Info to Go</h1>
+            <div class="text-center">
+                <p class="lead animated-underline d-inline-block mx-auto">Ваш источник актуальной информации</p>
             </div>
-        {% endfor %}
+        </div>
+
+        <!-- Статистические карточки в сбалансированном макете -->
+        <div class="stats-container row justify-content-center mb-4 g-3">
+            <div class="col-6 col-md-3 col-lg-2">
+                <div class="card stats-card text-center shadow-sm border-0">
+                    <div class="card-body p-3">
+                        <i class="bi bi-newspaper text-primary fs-4"></i>
+                        <h4 class="my-2">{{ news_count }}</h4>
+                        <p class="mb-0 small text-muted">Новостей</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3 col-lg-2">
+                <div class="card stats-card text-center shadow-sm border-0">
+                    <div class="card-body p-3">
+                        <i class="bi bi-people text-primary fs-4"></i>
+                        <h4 class="my-2">{{ users_count }}</h4>
+                        <p class="mb-0 small text-muted">Пользователей</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Визуальный разделитель -->
+        <div class="section-divider"></div>
+
+        <!-- Фильтры и сортировка с улучшенным дизайном -->
+        <div class="catalog-filters mb-4 p-3 bg-white rounded shadow-sm">
+            <div class="filters-header mb-2">
+                <i class="bi bi-funnel-fill me-2"></i>
+                <span class="filters-title">Управление отображением</span>
+            </div>
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    {% if current_category %}
+                        <div class="active-filter">
+                            <span>Категория: <strong>{{ current_category.name }}</strong></span>
+                            <a href="{% url 'news:catalog' %}" class="btn btn-sm btn-outline-secondary ms-2 filter-reset-btn">
+                                <i class="bi bi-x"></i> Сбросить
+                            </a>
+                        </div>
+                    {% elif current_tag %}
+                        <div class="active-filter">
+                            <span>Тег: <strong>{{ current_tag.name }}</strong></span>
+                            <a href="{% url 'news:catalog' %}" class="btn btn-sm btn-outline-secondary ms-2 filter-reset-btn">
+                                <i class="bi bi-x"></i> Сбросить
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6 text-md-end mt-3 mt-md-0">
+                    <div class="sort-label mb-1 d-inline-block me-2">Сортировка:</div>
+                    <div class="btn-group">
+                        <a href="?sort=publication_date&order=desc" class="btn btn-outline-primary btn-sm sort-btn {% if request.GET.sort == 'publication_date' and request.GET.order == 'desc' %}active{% endif %}">
+                            <i class="bi bi-sort-down"></i> Новые
+                        </a>
+                        <a href="?sort=publication_date&order=asc" class="btn btn-outline-primary btn-sm sort-btn {% if request.GET.sort == 'publication_date' and request.GET.order == 'asc' %}active{% endif %}">
+                            <i class="bi bi-sort-up"></i> Старые
+                        </a>
+                        <a href="?sort=views&order=desc" class="btn btn-outline-primary btn-sm sort-btn {% if request.GET.sort == 'views' and request.GET.order == 'desc' %}active{% endif %}">
+                            <i class="bi bi-eye"></i> Популярные
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <!-- Добавляем пагинацию внутри блока content -->
-    {% include "include/pagination.html" %}
+    <!-- Сетка новостей с улучшенным дизайном -->
+    <div class="catalog-grid bg-white p-4 rounded shadow-sm">
+        <div class="row g-4">
+            {% for article in news %}
+                <div class="col-md-6">
+                    {% include "include/article_preview.html" with article=article truncate_length=50 use_tag_margin=True use_formatted_meta=True %}
+                </div>
+            {% empty %}
+                <div class="col-12">
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle me-2"></i> В настоящее время новостей нет. Пожалуйста, заходите позже.
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Пагинация с улучшенным дизайном -->
+    <div class="pagination-container mt-4">
+        {% include "include/pagination.html" %}
+    </div>
 {% endblock %}

@@ -6,15 +6,15 @@
     <li class="nav-item dropdown">
         <a class="nav-link dropdown-toggle" href="{% url 'users:profile' %}" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
             {% if user.profile and user.profile.avatar %}
-                <img src="{{ user.profile.avatar.url }}" alt="{{ user.username }}" class="rounded-circle me-1" style="width: 28px; height: 28px; object-fit: cover;">
+                <img src="{{ user.profile.avatar.url }}" alt="{{ user.username }}" class="rounded-circle me-1 user-avatar">
             {% else %}
                 <i class="bi bi-person-circle me-1"></i>
             {% endif %}
             {{ user.username }}
             {% if user.is_superuser %}
-                <span class="badge bg-danger">Admin</span>
+                <span class="badge badge-admin">Admin</span>
             {% elif user|has_group:'Moderator' %}
-                <span class="badge bg-warning text-dark">Moderator</span>
+                <span class="badge badge-moderator">Moderator</span>
             {% endif %}
         </a>
         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
