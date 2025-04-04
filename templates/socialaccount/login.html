@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}Вход через {{ provider.name }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-5">
+    <div class="col-md-6 col-lg-4">
+        <div class="card auth-card">
+            <div class="card-header bg-primary text-white">
+                <h3 class="my-2 text-center">Вход через {{ provider.name }}</h3>
+            </div>
+            <div class="card-body p-4">
+                {% if provider.name == 'GitHub' %}
+                <p class="text-center mb-4">
+                    <i class="bi bi-github" style="font-size: 3rem;"></i>
+                </p>
+                {% else %}
+                <p class="text-center mb-4">
+                    <i class="bi bi-box-arrow-in-right" style="font-size: 3rem;"></i>
+                </p>
+                {% endif %}
+
+                <p class="text-center">Вы собираетесь войти, используя стороннюю учетную запись из {{ provider.name }}.</p>
+
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="process" value="{{ process }}">
+                    <input type="hidden" name="scope" value="{{ scope }}">
+                    <input type="hidden" name="auth_params" value="{{ auth_params }}">
+
+                    <div class="d-grid gap-2 mt-4">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-box-arrow-in-right me-2"></i>Продолжить
+                        </button>
+                        <a href="{% url 'account_login' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-circle me-2"></i>Отмена
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

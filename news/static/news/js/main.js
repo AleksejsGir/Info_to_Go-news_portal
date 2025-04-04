@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.querySelector('h1').classList.toggle('bg-warning');
     });
 
-     // Упрощенная функция для лайков
+    // Упрощенная функция для лайков
     const likeButtons = document.querySelectorAll('.like-button');
 
     likeButtons.forEach(button => {
@@ -20,7 +20,17 @@ document.addEventListener('DOMContentLoaded', function() {
                     'X-CSRFToken': getCookie('csrftoken')
                 }
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    // Если у нас ошибка 401 (не авторизован), перенаправляем на страницу логина
+                    if (response.status === 401) {
+                        window.location.href = '/accounts/login/?next=' + window.location.pathname;
+                        throw new Error('Требуется авторизация');
+                    }
+                    throw new Error('Ошибка сервера');
+                }
+                return response.json();
+            })
             .then(data => {
                 // Обновляем количество лайков
                 likesCountSpan.textContent = data.likes_count;
@@ -49,7 +59,17 @@ document.addEventListener('DOMContentLoaded', function() {
                     'X-CSRFToken': getCookie('csrftoken')
                 }
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    // Если у нас ошибка 401 (не авторизован), перенаправляем на страницу логина
+                    if (response.status === 401) {
+                        window.location.href = '/accounts/login/?next=' + window.location.pathname;
+                        throw new Error('Требуется авторизация');
+                    }
+                    throw new Error('Ошибка сервера');
+                }
+                return response.json();
+            })
             .then(data => {
                 // Обновляем количество добавлений в избранное
                 favoritesCountSpan.textContent = data.favorites_count;

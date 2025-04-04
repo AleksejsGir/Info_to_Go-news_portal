@@ -1,0 +1,67 @@
+{% extends 'users/profile_base.html' %}
+
+{% block profile_content %}
+<div class="card">
+    <div class="card-body">
+        <h4 class="mb-4">Мои статьи</h4>
+
+        {% if articles %}
+            <div class="list-group">
+                {% for article in articles %}
+                    <a href="{% url 'news:detail_article_by_id' article_id=article.id %}" class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h5 class="mb-1">{{ article.title }}</h5>
+                            <small>{{ article.publication_date|date:"d.m.Y H:i" }}</small>
+                        </div>
+                        <p class="mb-1">{{ article.content|truncatechars:150 }}</p>
+                        <small>Категория: {{ article.category.name }} | Просмотров: {{ article.views }}</small>
+                    </a>
+                {% endfor %}
+            </div>
+
+            <!-- Пагинация -->
+            {% if is_paginated %}
+            <div class="pagination mt-4 justify-content-center">
+                <nav aria-label="Навигация по страницам">
+                    <ul class="pagination">
+                        {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page=1" aria-label="Первая">
+                                    <span aria-hidden="true">&laquo;&laquo;</span>
+                                </a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.previous_page_number }}" aria-label="Предыдущая">
+                                    <span aria-hidden="true">&laquo;</span>
+                                </a>
+                            </li>
+                        {% endif %}
+
+                        <li class="page-item active" aria-current="page">
+                            <span class="page-link">{{ page_obj.number }} из {{ page_obj.paginator.num_pages }}</span>
+                        </li>
+
+                        {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.next_page_number }}" aria-label="Следующая">
+                                    <span aria-hidden="true">&raquo;</span>
+                                </a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}" aria-label="Последняя">
+                                    <span aria-hidden="true">&raquo;&raquo;</span>
+                                </a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+            {% endif %}
+        {% else %}
+            <div class="alert alert-info">
+                <p>У вас пока нет статей. <a href="{% url 'news:add_article' %}" class="alert-link">Создать новую статью</a></p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

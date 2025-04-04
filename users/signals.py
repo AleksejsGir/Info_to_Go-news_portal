@@ -4,6 +4,7 @@ from django.dispatch import receiver
 from django.contrib.auth import get_user_model
 from allauth.account.models import EmailAddress
 from django.utils import timezone
+from .models import Profile
 
 User = get_user_model()
 
@@ -34,9 +35,9 @@ def update_verified_status(sender, instance, created, **kwargs):
 def user_created_handler(sender, instance, created, **kwargs):
     """
     Обрабатывает создание нового пользователя.
-    Можно добавить дополнительные действия при регистрации.
+    Автоматически создает профиль для нового пользователя.
     """
     if created:
         print(f"[SIGNAL] Создан новый пользователь: {instance.username or instance.email}")
-        # Здесь можно добавить инициализацию профиля пользователя
-        # или другие действия, которые должны выполняться при регистрации
+        # Создаем профиль для нового пользователя
+        Profile.objects.get_or_create(user=instance)

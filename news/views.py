@@ -327,7 +327,12 @@ class ArticleCreateView(LoginRequiredMixin, CreateView):
         # Извлекаем валидированные данные из формы
         article = form.save(commit=False)
         article.views = 0
-        article.status = Article.Status.UNCHECKED
+
+        # Если пользователь не модератор/админ, ставим статус "не проверено"
+        if self.request.user.is_superuser or self.request.user.groups.filter(name="Moderator").exists():
+            article.status = Article.Status.CHECKED
+        else:
+            article.status = Article.Status.UNCHECKED
 
         # Добавляем текущего пользователя как автора
         article.author = self.request.user
@@ -338,25 +343,49 @@ class ArticleCreateView(LoginRequiredMixin, CreateView):
         return redirect('news:detail_article_by_id', article_id=article.id)
 
 
-# 11. Переписать article_update на UpdateView
 class ArticleUpdateView(LoginRequiredMixin, UpdateView):
     model = Article
     form_class = ArticleForm
     template_name = 'news/edit_article.html'
-    pk_url_kwarg = 'article_id'  # URL-параметр, содержащий ID статьи
+    pk_url_kwarg = 'article_id'
     redirect_field_name = 'next'
+
+    def get_queryset(self):
+        """
+        Ограничивает доступ к редактированию статей.
+        Admin и Moderator могут редактировать любые статьи,
+        обычные пользователи - только свои.
+        """
+        qs = super().get_queryset()
+        # Администратор и модератор могут редактировать все статьи
+        if self.request.user.is_superuser or self.request.user.groups.filter(name="Moderator").exists():
+            return qs
+        # Обычный пользователь - только свои статьи
+        return qs.filter(author=self.request.user)
 
     def get_success_url(self):
         return reverse_lazy('news:detail_article_by_id', kwargs={'article_id': self.object.id})
 
 
-# 12. Переписать article_delete на DeleteView
 class ArticleDeleteView(LoginRequiredMixin, DeleteView):
     model = Article
     template_name = 'news/delete_article.html'
     success_url = reverse_lazy('news:catalog')
-    pk_url_kwarg = 'article_id'  # URL-параметр, содержащий ID статьи
+    pk_url_kwarg = 'article_id'
     redirect_field_name = 'next'
+
+    def get_queryset(self):
+        """
+        Ограничивает доступ к удалению статей.
+        Admin и Moderator могут удалять любые статьи,
+        обычные пользователи - только свои.
+        """
+        qs = super().get_queryset()
+        # Администратор и модератор могут удалять все статьи
+        if self.request.user.is_superuser or self.request.user.groups.filter(name="Moderator").exists():
+            return qs
+        # Обычный пользователь - только свои статьи
+        return qs.filter(author=self.request.user)
 
 
 # 13. Преобразуем функцию edit_article_from_json в класс

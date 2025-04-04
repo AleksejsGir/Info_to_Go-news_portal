@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}Управление социальными аккаунтами{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-5">
+    <div class="col-md-8 col-lg-6">
+        <div class="card auth-card">
+            <div class="card-header bg-primary text-white">
+                <h3 class="my-2 text-center">Управление социальными аккаунтами</h3>
+            </div>
+            <div class="card-body p-4">
+                {% if form.accounts %}
+                <p class="mb-4">{% trans "You can sign in to your account using any of the following third party accounts:" %}</p>
+
+                <form method="post" action="{% url 'socialaccount_connections' %}">
+                    {% csrf_token %}
+
+                    <div class="list-group mb-4">
+                    {% for base_account in form.accounts %}
+                        {% with base_account.get_provider_account as account %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <i class="bi bi-{{ account.get_provider.id }} me-2"></i>
+                                <strong>{{ account.get_provider.name }}</strong>: {{ account }}
+                            </div>
+                            <div class="form-check">
+                                <input id="id_account_{{ base_account.id }}" type="checkbox" name="account_{{ base_account.id }}" class="form-check-input"/>
+                                <label for="id_account_{{ base_account.id }}" class="form-check-label"></label>
+                            </div>
+                        </div>
+                        {% endwith %}
+                    {% endfor %}
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-danger">
+                            <i class="bi bi-trash me-2"></i>{% trans "Remove selected accounts" %}
+                        </button>
+                    </div>
+                </form>
+
+                {% else %}
+                <p class="text-center mb-4">
+                    <i class="bi bi-info-circle" style="font-size: 3rem;"></i>
+                </p>
+                <p>{% trans 'You currently have no social network accounts connected to this account.' %}</p>
+                {% endif %}
+
+                <hr class="my-4">
+
+                <h4 class="mb-3">{% trans 'Add a social account' %}</h4>
+
+                <div class="list-group">
+                    {% include "socialaccount/snippets/provider_list.html" with process="connect" %}
+                </div>
+
+                <div class="mt-4">
+                    <a href="{% url 'account_email' %}" class="btn btn-outline-primary">
+                        <i class="bi bi-arrow-left me-2"></i>{% trans "Back to email settings" %}
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

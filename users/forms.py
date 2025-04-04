@@ -3,6 +3,7 @@ from django import forms
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from allauth.account.forms import SignupForm, LoginForm, ResetPasswordForm, EmailAddress
+from .models import Profile
 
 User = get_user_model()
 
@@ -163,6 +164,45 @@ class CustomSignupForm(SignupForm):
         user = super(CustomSignupForm, self).save(request)
         user.first_name = self.cleaned_data['first_name']
         user.last_name = self.cleaned_data['last_name']
-        user.username = user.email  # Используем email как username
+        # user.username = user.email  # Используем email как username
         user.save()
         return user
+
+
+class ProfileUpdateForm(forms.ModelForm):
+    """
+    Форма для обновления профиля пользователя.
+    Позволяет загружать аватар и редактировать информацию о себе.
+    """
+    class Meta:
+        model = Profile
+        fields = ['avatar', 'bio']
+        widgets = {
+            'avatar': forms.FileInput(attrs={
+                'class': 'form-control',
+            }),
+            'bio': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 4,
+                'placeholder': 'Расскажите о себе...'
+            }),
+        }
+
+
+class UserUpdateForm(forms.ModelForm):
+    """
+    Форма для обновления основной информации пользователя.
+    """
+    class Meta:
+        model = User
+        fields = ['first_name', 'last_name']
+        widgets = {
+            'first_name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Введите ваше имя'
+            }),
+            'last_name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Введите вашу фамилию'
+            }),
+        }

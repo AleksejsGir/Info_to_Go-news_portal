@@ -1,4 +1,5 @@
 <!-- templates/include/nav_menu.html -->
+{% load user_extras %}
 <ul class="navbar-nav me-auto">
     {% for item in menu %}
         <li class="nav-item">
@@ -21,34 +22,51 @@
     <!-- Разделитель перед пунктом "Избранное" -->
     <li class="nav-item"><hr class="dropdown-divider"/></li>
 
-    <!-- Пункт "Избранное" -->
+    <!-- Пункт "Избранное" - показывать только залогиненным пользователям -->
+    {% if user.is_authenticated %}
     <li class="nav-item">
         <a class="nav-link {% if is_favorites_page %}active{% endif %}" href="{% url 'news:favorite_news' %}">
             <i class="bi bi-bookmark me-1"></i> Избранное
         </a>
     </li>
+    {% endif %}
 
-    <!-- Добавляем пункт "Добавить статью" -->
+    <!-- Добавляем пункт "Добавить статью" - только для залогиненных пользователей -->
+    {% if user.is_authenticated %}
     <li class="nav-item">
         <a class="nav-link" href="{% url 'news:add_article' %}">
             <i class="bi bi-plus-circle me-1"></i> Добавить статью
         </a>
     </li>
-    <!-- Пункт "Загрузить из JSON" -->
+
+    <!-- Пункт "Загрузить из JSON" - только для модераторов и админов -->
+    {% if user.is_superuser or user|has_group:'Moderator' %}
     <li class="nav-item">
        <a class="nav-link" href="{% url 'news:upload_json' %}">
            <i class="bi bi-upload me-1"></i> Загрузить из JSON
       </a>
-   </li>
+    </li>
+    {% endif %}
+    {% endif %}
 
    <!-- Добавляем разделитель и пункт для входа/выхода -->
     {% if user.is_authenticated %}
     <!-- Если пользователь авторизован - показываем выпадающее меню пользователя -->
     <li class="nav-item dropdown">
-        <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+        <a class="nav-link dropdown-toggle" href="{% url 'users:profile' %}" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
             <i class="bi bi-person-circle me-1"></i> {{ user.username }}
+            {% if user.is_superuser %}
+                <span class="badge bg-danger">Admin</span>
+            {% elif user|has_group:'Moderator' %}
+                <span class="badge bg-warning text-dark">Moderator</span>
+            {% endif %}
         </a>
         <ul class="dropdown-menu" aria-labelledby="userDropdown">
+            <li>
+                <a class="dropdown-item" href="{% url 'users:profile' %}">
+                    <i class="bi bi-person me-2"></i>Мой профиль
+                </a>
+            </li>
             <li>
                 <a class="dropdown-item" href="{% url 'account_email' %}">
                     <i class="bi bi-envelope me-2"></i>Управление Email
@@ -57,6 +75,11 @@
             <li>
                 <a class="dropdown-item" href="{% url 'account_change_password' %}">
                     <i class="bi bi-key me-2"></i>Изменить пароль
+                </a>
+            </li>
+            <li>
+                <a class="dropdown-item" href="{% url 'socialaccount_connections' %}">
+                    <i class="bi bi-link-45deg me-2"></i>Управление соцсетями
                 </a>
             </li>
             <li><hr class="dropdown-divider"></li>

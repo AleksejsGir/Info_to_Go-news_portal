@@ -19,7 +19,31 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 DEBUG = os.getenv('DEBUG', 'False').lower() in ('true', '1')
 
 ALLOWED_HOSTS = []
-
+# LOGGING = {
+#     'version': 1,
+#     'disable_existing_loggers': False,
+#     'handlers': {
+#         'console': {
+#             'class': 'logging.StreamHandler',
+#         },
+#     },
+#     'root': {
+#         'handlers': ['console'],
+#         'level': 'DEBUG',
+#     },
+#     'loggers': {
+#         'django': {
+#             'handlers': ['console'],
+#             'level': 'DEBUG',
+#             'propagate': True,
+#         },
+#         'allauth': {
+#             'handlers': ['console'],
+#             'level': 'DEBUG',
+#             'propagate': True,
+#         },
+#     },
+# }
 INTERNAL_IPS = [
     '127.0.0.1',
 ]
@@ -41,6 +65,7 @@ INSTALLED_APPS = [
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
+    'allauth.socialaccount.providers.github',  # Добавляем провайдер GitHub
 
     'django_extensions',
     'debug_toolbar',
@@ -161,11 +186,18 @@ ACCOUNT_LOGOUT_REDIRECT_URL = 'account_login'  # Перенаправление 
 ACCOUNT_EMAIL_REQUIRED = True  # Email обязателен при регистрации
 ACCOUNT_EMAIL_VERIFICATION = "mandatory"  # Обязательная верификация email
 ACCOUNT_AUTHENTICATION_METHOD = "email"  # Использовать email для аутентификации
-ACCOUNT_USERNAME_REQUIRED = False  # Имя пользователя не обязательно
+ACCOUNT_USERNAME_REQUIRED = True  # Имя пользователя не обязательно
 ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 3  # Срок действия ссылки подтверждения
 ACCOUNT_EMAIL_CONFIRMATION_HMAC = True  # Использовать HMAC для защиты
 ACCOUNT_LOGIN_ON_EMAIL_CONFIRMATION = True  # Автовход после подтверждения email
 ACCOUNT_EMAIL_SUBJECT_PREFIX = "[The Future Prism] "  # Префикс темы писем
+
+SOCIALACCOUNT_PROVIDERS = {
+    'github': {
+        'SCOPE': ['user:email'],  # Запрашиваем доступ к email пользователя
+        'AUTH_PARAMS': {'access_type': 'online'},
+    }
+}
 
 # Кастомная форма регистрации
 ACCOUNT_FORMS = {
@@ -238,8 +270,8 @@ JAZZMIN_UI_TWEAKS = {
     "sidebar_nav_compact_style": True,
     "sidebar_nav_legacy_style": False,
     "sidebar_nav_flat_style": True,
-    "theme": "cyborg",
-    "dark_mode_theme": "cyborg",
+    "theme": "default",
+    "dark_mode_theme": "darkly",
     "button_classes": {
         "primary": "btn-primary",
         "secondary": "btn-secondary",
