@@ -248,6 +248,13 @@ JAZZMIN_SETTINGS = {
     "custom_js": None,  # Пользовательский JS
     "use_google_fonts_cdn": True,  # Использовать Google Fonts CDN
     "show_ui_builder": False,  # Показать конструктор интерфейса
+    "icons": {
+        "news.Article": "fas fa-newspaper",
+        "news.Category": "fas fa-folder",
+        "news.Tag": "fas fa-tag",
+        "auth.user": "fas fa-user",
+        "auth.Group": "fas fa-users",
+    },
 }
 
 JAZZMIN_UI_TWEAKS = {

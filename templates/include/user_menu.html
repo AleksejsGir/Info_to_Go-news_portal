@@ -5,7 +5,12 @@
     <!-- Если пользователь авторизован - показываем выпадающее меню пользователя -->
     <li class="nav-item dropdown">
         <a class="nav-link dropdown-toggle" href="{% url 'users:profile' %}" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-            <i class="bi bi-person-circle me-1"></i> {{ user.username }}
+            {% if user.profile and user.profile.avatar %}
+                <img src="{{ user.profile.avatar.url }}" alt="{{ user.username }}" class="rounded-circle me-1" style="width: 28px; height: 28px; object-fit: cover;">
+            {% else %}
+                <i class="bi bi-person-circle me-1"></i>
+            {% endif %}
+            {{ user.username }}
             {% if user.is_superuser %}
                 <span class="badge bg-danger">Admin</span>
             {% elif user|has_group:'Moderator' %}
