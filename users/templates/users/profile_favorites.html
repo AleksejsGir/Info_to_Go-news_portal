@@ -3,17 +3,11 @@
 {% block profile_content %}
 <div class="card">
     <div class="card-body">
-        <!-- Добавляем кнопку в верхней части страницы -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h4 class="mb-0">Мои статьи</h4>
-            <a href="{% url 'news:add_article' %}" class="btn btn-primary">
-                <i class="bi bi-plus-circle me-1"></i> Добавить статью
-            </a>
-        </div>
+        <h4 class="mb-4">Избранные статьи</h4>
 
-        {% if articles %}
+        {% if favorites %}
             <div class="list-group">
-                {% for article in articles %}
+                {% for article in favorites %}
                     <a href="{% url 'news:detail_article_by_id' article_id=article.id %}" class="list-group-item list-group-item-action">
                         <div class="d-flex">
                             <!-- Добавляем блок изображения -->
@@ -81,7 +75,7 @@
             {% endif %}
         {% else %}
             <div class="alert alert-info">
-                <p>У вас пока нет статей. <a href="{% url 'news:add_article' %}" class="alert-link">Создать новую статью</a></p>
+                <p>У вас пока нет избранных статей.</p>
             </div>
         {% endif %}
     </div>

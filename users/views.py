@@ -95,3 +95,24 @@ class ProfileUpdateView(LoginRequiredMixin, TemplateView):
         context['user_form'] = user_form
         context['profile_form'] = profile_form
         return render(request, self.template_name, context)
+
+
+class ProfileFavoritesView(LoginRequiredMixin, ListView):
+    """
+    Представление для отображения избранных статей пользователя в профиле.
+    """
+    template_name = 'users/profile_favorites.html'
+    context_object_name = 'favorites'
+    paginate_by = 10
+
+    def get_queryset(self):
+        # Получаем ID избранных статей пользователя
+        from news.models import Favorite, Article
+        favorite_ids = Favorite.objects.filter(user=self.request.user).values_list('article_id', flat=True)
+        # Возвращаем статьи с этими ID
+        return Article.objects.filter(id__in=favorite_ids).order_by('-publication_date')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['active_tab'] = 'favorites'
+        return context

@@ -76,16 +76,13 @@
                     <!-- Кнопки управления статьей - только для автора, модератора или админа -->
                     {% if article|can_edit:user %}
                     <div class="btn-group" role="group">
-
-                            href="{% url 'news:article_update' article.id %}"
-                            class="btn btn-warning btn-sm"
-                        >
+                        <a href="{% url 'news:article_update' article.id %}"
+                            class="btn btn-warning btn-sm">
                             <i class="bi bi-pencil"></i> Редактировать
                         </a>
 
-                            href="{% url 'news:article_delete' article.id %}"
-                            class="btn btn-danger btn-sm"
-                        >
+                        <a href="{% url 'news:article_delete' article.id %}"
+                            class="btn btn-danger btn-sm">
                             <i class="bi bi-trash"></i> Удалить
                         </a>
                     </div>

@@ -19,34 +19,20 @@
         {% endif %}
     {% endfor %}
 
-    <!-- Разделитель перед пунктом "Избранное" -->
+    <!-- Добавляем разделитель перед пунктами управления -->
     <li class="nav-item"><hr class="dropdown-divider"/></li>
 
-    <!-- Пункт "Избранное" - показывать только залогиненным пользователям -->
-    {% if user.is_authenticated %}
-    <li class="nav-item">
-        <a class="nav-link {% if is_favorites_page %}active{% endif %}" href="{% url 'news:favorite_news' %}">
-            <i class="bi bi-bookmark me-1"></i> Избранное
-        </a>
-    </li>
-    {% endif %}
-
-    <!-- Добавляем пункт "Добавить статью" - только для залогиненных пользователей -->
-    {% if user.is_authenticated %}
-    <li class="nav-item">
-        <a class="nav-link" href="{% url 'news:add_article' %}">
-            <i class="bi bi-plus-circle me-1"></i> Добавить статью
-        </a>
-    </li>
+    <!-- УДАЛЕНЫ кнопки "Избранное" и "Добавить статью" -->
 
     <!-- Пункт "Загрузить из JSON" - только для модераторов и админов -->
-    {% if user.is_superuser or user|has_group:'Moderator' %}
-    <li class="nav-item">
-       <a class="nav-link" href="{% url 'news:upload_json' %}">
-           <i class="bi bi-upload me-1"></i> Загрузить из JSON
-      </a>
-    </li>
-    {% endif %}
+    {% if user.is_authenticated %}
+        {% if user.is_superuser or user|has_group:'Moderator' %}
+        <li class="nav-item">
+           <a class="nav-link" href="{% url 'news:upload_json' %}">
+               <i class="bi bi-upload me-1"></i> Загрузить из JSON
+          </a>
+        </li>
+        {% endif %}
     {% endif %}
 
    <!-- Добавляем разделитель и пункт для входа/выхода -->
