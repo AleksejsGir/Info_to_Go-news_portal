@@ -60,29 +60,7 @@
             {% if not hide_sidebar %}
             <!-- Боковое меню с категориями -->
             <div class="col-md-3">
-                <div class="sidebar">
-                    <h5>Категории новостей</h5>
-                    <ul>
-                        <!-- Пункт "Все новости" -->
-                        <li class="all-news-item">
-                            <a href="{% url 'news:catalog' %}" class="text-decoration-none">
-                                <strong>Все новости</strong>
-                                <span class="category-count all-news-count">{{ news_count }}</span>
-                            </a>
-                        </li>
-                        <!-- Разделитель между "Все новости" и категориями -->
-                        <li class="category-divider"></li>
-                        <!-- Список категорий -->
-                        {% for category in categories_list %}
-                            <li>
-                                <a href="{% url 'news:news_by_category' category.id %}" class="text-decoration-none">
-                                    {{ category.name }}
-                                    <span class="category-count">{{ category.news_count }}</span>
-                                </a>
-                            </li>
-                        {% endfor %}
-                    </ul>
-                </div>
+                {% include "include/category_cards.html" %}
             </div>
             <!-- Основной контент с учетом наличия сайдбара -->
             <div class="col-md-9">

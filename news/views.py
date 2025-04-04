@@ -19,6 +19,7 @@ from .forms import ArticleForm, ArticleUploadForm
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 
+
 # Класс для получения данных о категориях
 class CategoryService:
     @staticmethod
@@ -73,6 +74,40 @@ class AboutView(TemplateView):
 # Также добавим представление для главной страницы
 class MainView(TemplateView):
     template_name = 'main.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        # Получаем актуальные данные для главной страницы
+        context['featured_articles'] = Article.objects.filter(
+            is_active=True
+        ).order_by('-publication_date')[:5]
+
+        context['latest_articles'] = Article.objects.filter(
+            is_active=True
+        ).order_by('-publication_date')[:6]
+
+        context['most_viewed_articles'] = Article.objects.filter(
+            is_active=True
+        ).order_by('-views')[:4]
+
+        # Получаем статьи по категориям
+        popular_categories = Category.objects.annotate(
+            articles_count=Count('article')
+        ).order_by('-articles_count')[:4]
+
+        category_articles = {}
+        for category in popular_categories:
+            articles = Article.objects.filter(
+                category=category,
+                is_active=True
+            ).order_by('-publication_date')[:3]
+            category_articles[category] = articles
+
+        context['category_articles'] = category_articles
+        context['users_count'] = get_user_model().objects.count()
+
+        return context
 
 
 # Представление для отображения всех новостей (каталог)

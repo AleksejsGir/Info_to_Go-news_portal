@@ -1,0 +1,54 @@
+<!-- templates/include/category_cards.html -->
+<div class="categories-cards">
+    <h5 class="cards-heading">Категории новостей</h5>
+
+    <!-- Верхняя кнопка "Все новости" -->
+    <div class="text-center mb-3">
+        <a href="{% url 'news:catalog' %}" class="btn btn-primary w-100">
+            Все новости <span class="badge bg-light text-primary">{{ news_count }}</span>
+        </a>
+    </div>
+
+    <!-- Карточки категорий -->
+    <div class="row g-2">
+        {% for category in categories_list %}
+            {% if category.news_count > 0 %}
+            <div class="col-6">
+                <a href="{% url 'news:news_by_category' category.id %}" class="category-card">
+                    <div class="category-card-icon">
+                        {% if category.name == 'Автомобили' %}
+                            <i class="bi bi-car-front"></i>
+                        {% elif category.name == 'Технологии' %}
+                            <i class="bi bi-cpu"></i>
+                        {% elif category.name == 'Культура' %}
+                            <i class="bi bi-book"></i>
+                        {% elif category.name == 'Здоровье' %}
+                            <i class="bi bi-heart-pulse"></i>
+                        {% elif category.name == 'Наука' %}
+                            <i class="bi bi-rocket-takeoff"></i>
+                        {% elif category.name == 'Образование' %}
+                            <i class="bi bi-mortarboard"></i>
+                        {% elif category.name == 'Политика' %}
+                            <i class="bi bi-award"></i>
+                        {% elif category.name == 'Путешествия' %}
+                            <i class="bi bi-airplane"></i>
+                        {% elif category.name == 'Спорт' %}
+                            <i class="bi bi-trophy"></i>
+                        {% elif category.name == 'Мистика' %}
+                            <i class="bi bi-moon-stars"></i>
+                        {% elif category.name == 'Туризм' %}
+                            <i class="bi bi-map"></i>
+                        {% elif category.name == 'Всячина' %}
+                            <i class="bi bi-collection"></i>
+                        {% else %}
+                            <i class="bi bi-folder"></i>
+                        {% endif %}
+                    </div>
+                    <div class="category-card-name">{{ category.name }}</div>
+                    <div class="category-card-count">{{ category.news_count }}</div>
+                </a>
+            </div>
+            {% endif %}
+        {% endfor %}
+    </div>
+</div>
