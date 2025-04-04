@@ -1,5 +1,4 @@
 {% extends "base.html" %}
-{% load i18n %}
 
 {% block title %}Управление социальными аккаунтами{% endblock %}
 
@@ -12,7 +11,7 @@
             </div>
             <div class="card-body p-4">
                 {% if form.accounts %}
-                <p class="mb-4">{% trans "You can sign in to your account using any of the following third party accounts:" %}</p>
+                <p class="mb-4">Вы можете войти в свой аккаунт, используя следующие сторонние учетные записи:</p>
 
                 <form method="post" action="{% url 'socialaccount_connections' %}">
                     {% csrf_token %}
@@ -36,7 +35,7 @@
 
                     <div class="d-grid gap-2">
                         <button type="submit" class="btn btn-danger">
-                            <i class="bi bi-trash me-2"></i>{% trans "Remove selected accounts" %}
+                            <i class="bi bi-trash me-2"></i>Удалить выбранные аккаунты
                         </button>
                     </div>
                 </form>
@@ -45,12 +44,12 @@
                 <p class="text-center mb-4">
                     <i class="bi bi-info-circle" style="font-size: 3rem;"></i>
                 </p>
-                <p>{% trans 'You currently have no social network accounts connected to this account.' %}</p>
+                <p>В настоящее время у вас нет подключенных социальных аккаунтов.</p>
                 {% endif %}
 
                 <hr class="my-4">
 
-                <h4 class="mb-3">{% trans 'Add a social account' %}</h4>
+                <h4 class="mb-3">Добавить социальный аккаунт</h4>
 
                 <div class="list-group">
                     {% include "socialaccount/snippets/provider_list.html" with process="connect" %}
@@ -58,7 +57,7 @@
 
                 <div class="mt-4">
                     <a href="{% url 'account_email' %}" class="btn btn-outline-primary">
-                        <i class="bi bi-arrow-left me-2"></i>{% trans "Back to email settings" %}
+                        <i class="bi bi-arrow-left me-2"></i>Вернуться к настройкам Email
                     </a>
                 </div>
             </div>

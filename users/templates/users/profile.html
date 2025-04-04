@@ -54,14 +54,18 @@
                         {% endif %}
                     </tbody>
                 </table>
-
                 <div class="mt-4">
                     <h5>Управление профилем</h5>
                     <div class="list-group">
                         <a href="{% url 'account_change_password' %}" class="list-group-item list-group-item-action">
-                            <i class="fas fa-key me-2"></i> Сменить пароль
+                            <i class="bi bi-lock-fill me-2"></i> Сменить пароль
                         </a>
-                        <!-- Здесь можно добавить дополнительные ссылки для управления профилем -->
+                        <a href="{% url 'account_email' %}" class="list-group-item list-group-item-action">
+                            <i class="bi bi-envelope me-2"></i> Управление Email
+                        </a>
+                        <a href="{% url 'socialaccount_connections' %}" class="list-group-item list-group-item-action">
+                            <i class="bi bi-link-45deg me-2"></i> Социальные аккаунты
+                        </a>
                     </div>
                 </div>
             </div>

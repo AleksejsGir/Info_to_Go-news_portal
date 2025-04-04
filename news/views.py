@@ -1,4 +1,5 @@
 # news/views.py
+from users.utils import record_user_activity
 from django.contrib.auth.mixins import LoginRequiredMixin # это встроенный миксин в Django!!!!
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
@@ -135,6 +136,22 @@ class BaseToggleView(LoginRequiredMixin, View):
             # Используем метод модели для переключения состояния
             method = getattr(article, self.toggle_method)
             is_active, count = method(request.user)
+
+            # Определяем тип действия и описание в зависимости от метода
+            if self.toggle_method == 'toggle_like':
+                action_type = 'like_article'
+                action_description = f'{"Добавлен" if is_active else "Удален"} лайк к статье "{article.title}"'
+            else:  # toggle_favorite
+                action_type = 'favorite_article'
+                action_description = f'{"Добавлена статья в избранное" if is_active else "Удалена статья из избранного"}: "{article.title}"'
+
+            # Записываем действие в историю
+            record_user_activity(
+                user=request.user,
+                action_type=action_type,
+                description=action_description,
+                related_object_id=article.id
+            )
 
             # Формируем ответ
             response_data = {
@@ -340,6 +357,14 @@ class ArticleCreateView(LoginRequiredMixin, CreateView):
         article.save()
         form.save_m2m()  # Сохраняем теги (many-to-many отношения)
 
+        # Добавляем запись о создании статьи в историю действий
+        record_user_activity(
+            user=self.request.user,
+            action_type='create_article',
+            description=f'Создана статья "{article.title}"',
+            related_object_id=article.id
+        )
+
         return redirect('news:detail_article_by_id', article_id=article.id)
 
 
@@ -362,6 +387,19 @@ class ArticleUpdateView(LoginRequiredMixin, UpdateView):
             return qs
         # Обычный пользователь - только свои статьи
         return qs.filter(author=self.request.user)
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+
+        # Добавляем запись о редактировании статьи в историю действий
+        record_user_activity(
+            user=self.request.user,
+            action_type='edit_article',
+            description=f'Отредактирована статья "{self.object.title}"',
+            related_object_id=self.object.id
+        )
+
+        return response
 
     def get_success_url(self):
         return reverse_lazy('news:detail_article_by_id', kwargs={'article_id': self.object.id})
@@ -386,6 +424,25 @@ class ArticleDeleteView(LoginRequiredMixin, DeleteView):
             return qs
         # Обычный пользователь - только свои статьи
         return qs.filter(author=self.request.user)
+
+    def delete(self, request, *args, **kwargs):
+        # Получаем статью до ее удаления, чтобы сохранить информацию
+        article = self.get_object()
+        article_title = article.title
+        article_id = article.id
+
+        # Вызываем родительский метод delete для выполнения удаления
+        response = super().delete(request, *args, **kwargs)
+
+        # Записываем действие об удалении статьи в историю действий
+        record_user_activity(
+            user=request.user,
+            action_type='delete_article',
+            description=f'Удалена статья "{article_title}"',
+            related_object_id=article_id
+        )
+
+        return response
 
 
 # 13. Преобразуем функцию edit_article_from_json в класс

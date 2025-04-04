@@ -10,13 +10,11 @@
                 <p class="mb-0">История действий отсутствует</p>
             </div>
         {% else %}
-            <!-- Здесь будет размещен код для отображения истории действий,
-                 когда мы реализуем эту функциональность полностью -->
             <ul class="list-group">
                 {% for action in user_actions %}
                     <li class="list-group-item">
                         <div class="d-flex w-100 justify-content-between">
-                            <h5 class="mb-1">{{ action.action_type }}</h5>
+                            <h5 class="mb-1">{{ action.get_action_type_display }}</h5>
                             <small>{{ action.timestamp|date:"d.m.Y H:i" }}</small>
                         </div>
                         <p class="mb-1">{{ action.description }}</p>

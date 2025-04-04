@@ -1,5 +1,4 @@
 {% extends "base.html" %}
-{% load i18n %}
 
 {% block title %}Ошибка авторизации{% endblock %}
 
@@ -16,7 +15,7 @@
                 </div>
 
                 <div class="alert alert-danger">
-                    <p>{% trans "An error occurred while attempting to login via your social network account." %}</p>
+                    <p>Произошла ошибка при попытке входа через социальную сеть.</p>
                     {% if error %}
                     <p class="mt-2"><strong>Ошибка:</strong> {{ error }}</p>
                     {% endif %}

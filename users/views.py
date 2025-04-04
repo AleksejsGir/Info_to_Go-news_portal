@@ -6,7 +6,8 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
 from news.models import Article
 from .forms import ProfileUpdateForm, UserUpdateForm
-from .models import Profile
+from .models import Profile, UserActivity
+from .utils import record_user_activity
 
 
 class ProfileView(LoginRequiredMixin, TemplateView):
@@ -42,18 +43,21 @@ class UserArticlesView(LoginRequiredMixin, ListView):
         return context
 
 
-class UserActivityView(LoginRequiredMixin, TemplateView):
+class UserActivityView(LoginRequiredMixin, ListView):
     """
     Представление для отображения истории действий пользователя.
-    Используется заглушка вместо реальной истории действий.
     """
     template_name = 'users/profile_activity.html'
+    context_object_name = 'user_actions'
+    paginate_by = 10
+
+    def get_queryset(self):
+        return UserActivity.objects.filter(user=self.request.user).order_by('-timestamp')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['active_tab'] = 'activity'
-        # Всегда передаем empty_activity = True, так как это заглушка
-        context['empty_activity'] = True
+        context['empty_activity'] = self.get_queryset().count() == 0
         return context
 
 
@@ -88,6 +92,14 @@ class ProfileUpdateView(LoginRequiredMixin, TemplateView):
         if user_form.is_valid() and profile_form.is_valid():
             user_form.save()
             profile_form.save()
+
+            # Добавляем запись о действии
+            record_user_activity(
+                user=request.user,
+                action_type='edit_profile',
+                description='Профиль был обновлен'
+            )
+
             messages.success(request, 'Профиль успешно обновлен!')
             return redirect('users:profile')
 

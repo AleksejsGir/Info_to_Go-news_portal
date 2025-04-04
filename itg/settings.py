@@ -194,7 +194,7 @@ ACCOUNT_EMAIL_SUBJECT_PREFIX = "[The Future Prism] "  # Префикс темы 
 
 SOCIALACCOUNT_PROVIDERS = {
     'github': {
-        'SCOPE': ['user:email'],  # Запрашиваем доступ к email пользователя
+        'SCOPE': ['user:email'],
         'AUTH_PARAMS': {'access_type': 'online'},
     }
 }

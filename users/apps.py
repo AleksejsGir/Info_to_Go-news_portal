@@ -12,3 +12,4 @@ class UsersConfig(AppConfig):
         Импортирует модуль сигналов для регистрации всех обработчиков сигналов.
         """
         import users.signals  # Импортируем сигналы
+        import users.auth_handlers  # Добавляем импорт обработчиков аутентификации
