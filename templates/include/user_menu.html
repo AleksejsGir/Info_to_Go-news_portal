@@ -1,0 +1,60 @@
+<!-- templates/include/user_menu.html -->
+{% load user_extras %}
+<ul class="navbar-nav">
+    {% if user.is_authenticated %}
+    <!-- Если пользователь авторизован - показываем выпадающее меню пользователя -->
+    <li class="nav-item dropdown">
+        <a class="nav-link dropdown-toggle" href="{% url 'users:profile' %}" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="bi bi-person-circle me-1"></i> {{ user.username }}
+            {% if user.is_superuser %}
+                <span class="badge bg-danger">Admin</span>
+            {% elif user|has_group:'Moderator' %}
+                <span class="badge bg-warning text-dark">Moderator</span>
+            {% endif %}
+        </a>
+        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+            <li>
+                <a class="dropdown-item" href="{% url 'users:profile' %}">
+                    <i class="bi bi-person me-2"></i>Мой профиль
+                </a>
+            </li>
+            <li>
+                <a class="dropdown-item" href="{% url 'account_email' %}">
+                    <i class="bi bi-envelope me-2"></i>Управление Email
+                </a>
+            </li>
+            <li>
+                <a class="dropdown-item" href="{% url 'account_change_password' %}">
+                    <i class="bi bi-key me-2"></i>Изменить пароль
+                </a>
+            </li>
+            <li>
+                <a class="dropdown-item" href="{% url 'socialaccount_connections' %}">
+                    <i class="bi bi-link-45deg me-2"></i>Управление соцсетями
+                </a>
+            </li>
+            <li><hr class="dropdown-divider"></li>
+            <li>
+                <form method="post" action="{% url 'account_logout' %}" class="m-0 p-0">
+                    {% csrf_token %}
+                    <button type="submit" class="dropdown-item">
+                        <i class="bi bi-box-arrow-right me-2"></i>Выход
+                    </button>
+                </form>
+            </li>
+        </ul>
+    </li>
+    {% else %}
+    <!-- Если пользователь не авторизован - показываем кнопки входа и регистрации -->
+    <li class="nav-item">
+        <a class="nav-link" href="{% url 'account_login' %}">
+            <i class="bi bi-box-arrow-in-right me-1"></i> Вход
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" href="{% url 'account_signup' %}">
+            <i class="bi bi-person-plus me-1"></i> Регистрация
+        </a>
+    </li>
+    {% endif %}
+</ul>

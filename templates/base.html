@@ -25,28 +25,32 @@
                     <span class="navbar-toggler-icon"></span>
                 </button>
                 <div class="collapse navbar-collapse" id="navbarNav">
-                    <ul class="navbar-nav me-auto">
-                        {% include "include/nav_menu.html" %}
-                    </ul>
+                    <!-- Навигационное меню слева -->
+                    {% include "include/nav_menu.html" %}
 
-                    <!-- Форма поиска -->
-                    <form method="GET" action="{% url 'news:search_news' %}" class="d-flex">
-                        <input
-                            class="form-control me-2"
-                            type="search"
-                            placeholder="Поиск новостей"
-                            aria-label="Search"
-                            name="q"
-                            style="background-color: #495057; color: #ffffff; border: none;"
-                        >
-                        <button
-                            class="btn btn-outline-light"
-                            type="submit"
-                            style="background-color: #6c757d; color: #ffffff;"
-                        >
-                            Найти
-                        </button>
-                    </form>
+                    <div class="d-flex align-items-center ms-auto">
+                        <!-- Форма поиска -->
+                        <form method="GET" action="{% url 'news:search_news' %}" class="d-flex me-3">
+                            <input
+                                class="form-control me-2"
+                                type="search"
+                                placeholder="Поиск новостей"
+                                aria-label="Search"
+                                name="q"
+                                style="background-color: #495057; color: #ffffff; border: none;"
+                            >
+                            <button
+                                class="btn btn-outline-light"
+                                type="submit"
+                                style="background-color: #6c757d; color: #ffffff;"
+                            >
+                                Найти
+                            </button>
+                        </form>
+
+                        <!-- Блок пользователя справа -->
+                        {% include "include/user_menu.html" %}
+                    </div>
                 </div>
             </div>
         </nav>
