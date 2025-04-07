@@ -4,36 +4,46 @@
 {% block title %}Профиль пользователя{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <div class="row">
-        <div class="col-md-12">
-            <h2 class="mb-4">Профиль пользователя</h2>
-
-            <!-- Навигация по вкладкам -->
-            <ul class="nav nav-tabs mb-4">
-                <li class="nav-item">
-                    <a class="nav-link {% if active_tab == 'profile' %}active{% endif %}"
-                       href="{% url 'users:profile' %}">Информация</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link {% if active_tab == 'articles' %}active{% endif %}"
-                       href="{% url 'users:profile_articles' %}">Мои статьи</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link {% if active_tab == 'favorites' %}active{% endif %}"
-                       href="{% url 'users:profile_favorites' %}">Избранное</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link {% if active_tab == 'activity' %}active{% endif %}"
-                       href="{% url 'users:profile_activity' %}">История действий</a>
-                </li>
-            </ul>
-
-            <!-- Содержимое текущей вкладки -->
-            <div class="tab-content">
-                {% block profile_content %}{% endblock %}
-            </div>
+<!-- Шапка профиля с градиентом -->
+<div class="catalog-header interactive-header mb-5">
+    <div class="gradient-primary py-4 mb-4">
+        <h1 class="title-3d mb-3">Профиль пользователя</h1>
+        <div class="text-center">
+            <p class="lead animated-underline d-inline-block mx-auto">Управление вашей учетной записью и настройками</p>
         </div>
+    </div>
+
+    <!-- Навигация по вкладкам -->
+    <ul class="nav nav-tabs profile-tabs mb-4">
+        <li class="nav-item">
+            <a class="nav-link {% if active_tab == 'profile' %}active{% endif %}"
+               href="{% url 'users:profile' %}">
+                <i class="bi bi-person nav-icon"></i>Информация
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if active_tab == 'articles' %}active{% endif %}"
+               href="{% url 'users:profile_articles' %}">
+                <i class="bi bi-file-text nav-icon"></i>Мои статьи
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if active_tab == 'favorites' %}active{% endif %}"
+               href="{% url 'users:profile_favorites' %}">
+                <i class="bi bi-bookmark nav-icon"></i>Избранное
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if active_tab == 'activity' %}active{% endif %}"
+               href="{% url 'users:profile_activity' %}">
+                <i class="bi bi-clock-history nav-icon"></i>История действий
+            </a>
+        </li>
+    </ul>
+
+    <!-- Содержимое текущей вкладки -->
+    <div class="tab-content">
+        {% block profile_content %}{% endblock %}
     </div>
 </div>
 {% endblock %}

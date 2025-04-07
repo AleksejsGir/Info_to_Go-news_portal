@@ -1,34 +1,35 @@
 {% extends 'users/profile_base.html' %}
 
 {% block profile_content %}
-<div class="card">
+<div class="card profile-card">
     <div class="card-body">
-        <h4 class="mb-4">Избранные статьи</h4>
+        <h4 class="card-title mb-4"><i class="bi bi-bookmark-heart me-2"></i>Избранные статьи</h4>
 
         {% if favorites %}
-            <div class="list-group">
+            <div class="article-list">
                 {% for article in favorites %}
-                    <a href="{% url 'news:detail_article_by_id' article_id=article.id %}" class="list-group-item list-group-item-action">
+                    <a href="{% url 'news:detail_article_by_id' article_id=article.id %}" class="article-item">
                         <div class="d-flex">
-                            <!-- Добавляем блок изображения -->
-                            <div class="me-3" style="width: 100px; height: 80px; flex-shrink: 0;">
+                            <div class="article-image-container me-3">
                                 {% if article.image %}
-                                    <img src="{{ article.image.url }}" class="img-fluid rounded" style="width: 100%; height: 100%; object-fit: cover;" alt="{{ article.title }}">
+                                    <img src="{{ article.image.url }}" class="article-thumbnail" alt="{{ article.title }}">
                                 {% else %}
-                                    <div class="bg-light d-flex align-items-center justify-content-center rounded" style="width: 100%; height: 100%;">
-                                        <i class="bi bi-image text-muted" style="font-size: 2rem;"></i>
+                                    <div class="article-thumbnail-placeholder">
+                                        <i class="bi bi-image"></i>
                                     </div>
                                 {% endif %}
                             </div>
 
-                            <!-- Информация о статье -->
-                            <div class="flex-grow-1">
+                            <div class="article-details">
                                 <div class="d-flex w-100 justify-content-between">
-                                    <h5 class="mb-1">{{ article.title }}</h5>
-                                    <small>{{ article.publication_date|date:"d.m.Y H:i" }}</small>
+                                    <h5 class="article-title">{{ article.title }}</h5>
+                                    <small class="article-date">{{ article.publication_date|date:"d.m.Y H:i" }}</small>
                                 </div>
-                                <p class="mb-1">{{ article.content|truncatechars:150 }}</p>
-                                <small>Категория: {{ article.category.name }} | Просмотров: {{ article.views }}</small>
+                                <p class="article-excerpt">{{ article.content|truncatechars:150 }}</p>
+                                <div class="article-meta">
+                                    <span class="badge bg-primary me-2">{{ article.category.name }}</span>
+                                    <small><i class="bi bi-eye me-1"></i>{{ article.views }}</small>
+                                </div>
                             </div>
                         </div>
                     </a>
@@ -37,7 +38,7 @@
 
             <!-- Пагинация -->
             {% if is_paginated %}
-            <div class="pagination mt-4 justify-content-center">
+            <div class="pagination-container mt-4">
                 <nav aria-label="Навигация по страницам">
                     <ul class="pagination">
                         {% if page_obj.has_previous %}
@@ -75,7 +76,8 @@
             {% endif %}
         {% else %}
             <div class="alert alert-info">
-                <p>У вас пока нет избранных статей.</p>
+                <i class="bi bi-info-circle me-2"></i>
+                <p class="mb-0">У вас пока нет избранных статей.</p>
             </div>
         {% endif %}
     </div>
