@@ -88,7 +88,8 @@
         </button>
     </div>
 </div>
-
+<!-- Визуальный разделитель -->
+<div class="section-divider my-5"></div>
 <!-- Секция "Последние новости" -->
 <div class="latest-news-section mb-5">
     <h2 class="section-title"><i class="bi bi-clock-history me-2"></i>Последние новости</h2>
@@ -133,27 +134,33 @@
 <div class="section-divider my-5"></div>
 
 <!-- Секция "Популярные категории" -->
-<div class="popular-categories-section mb-5">
+<section class="popular-categories-block mb-5">
     <h2 class="section-title"><i class="bi bi-grid-3x3-gap me-2"></i>Популярные категории</h2>
+
     <div class="row">
         {% for category, articles in category_articles.items %}
             {% if articles %}
-                <div class="col-md-6 mb-4">
-                    <div class="category-card shadow-sm">
-                        <h3 class="category-title">{{ category.name }}</h3>
-                        <ul class="list-group list-group-flush">
+                <div class="col-md-6">
+                    <div class="category-section">
+                        <div class="category-header">
+                            <h3>{{ category.name }}</h3>
+                            <a href="{% url 'news:news_by_category' category.id %}" class="all-link">
+                                <i class="bi bi-arrow-right"></i> Все новости
+                            </a>
+                        </div>
+                        <div class="news-card-list">
                             {% for article in articles|slice:":3" %}
-                                <li class="list-group-item">
-                                    <a href="{% url 'news:detail_article_by_id' article.id %}" class="text-decoration-none">
-                                        {{ article.title }}
-                                    </a>
-                                    <small class="text-muted ms-2">{{ article.publication_date|date:"d.m.Y" }}</small>
-                                </li>
+                                <a href="{% url 'news:detail_article_by_id' article.id %}" class="news-item-card">
+                                    <h4 class="news-item-title">{{ article.title }}</h4>
+                                    <div class="news-item-date">
+                                        <i class="bi bi-calendar3"></i> {{ article.publication_date|date:"d.m.Y" }}
+                                    </div>
+                                </a>
                             {% endfor %}
-                        </ul>
-                        <div class="text-end p-3">
-                            <a href="{% url 'news:news_by_category' category.id %}" class="btn btn-sm btn-outline-primary">
-                                <i class="bi bi-arrow-right me-1"></i>Все новости категории
+                        </div>
+                        <div class="text-center mt-3">
+                            <a href="{% url 'news:news_by_category' category.id %}" class="category-more-btn">
+                                <i class="bi bi-plus-circle me-1"></i> Все новости категории
                             </a>
                         </div>
                     </div>
@@ -167,8 +174,9 @@
             </div>
         {% endfor %}
     </div>
-</div>
-
+</section>
+<!-- Визуальный разделитель -->
+<div class="section-divider my-5"></div>
 <!-- Секция "Самое популярное" -->
 <div class="most-viewed-section mb-5">
     <h2 class="section-title"><i class="bi bi-graph-up me-2"></i>Самое популярное</h2>
@@ -197,4 +205,8 @@
         {% endfor %}
     </div>
 </div>
-{% endblock %}
+
+        <!-- Визуальный разделитель -->
+<div class="section-divider my-5"></div>
+
+        {% endblock %}

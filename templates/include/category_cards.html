@@ -1,11 +1,13 @@
 <!-- templates/include/category_cards.html -->
 <div class="categories-cards">
-    <h5 class="cards-heading">Категории новостей</h5>
+    <div class="category-header gradient-primary mb-3">
+        <h5 class="cards-heading text-dark mb-0">Категории новостей</h5>
+    </div>
 
     <!-- Верхняя кнопка "Все новости" -->
     <div class="text-center mb-3">
-        <a href="{% url 'news:catalog' %}" class="btn btn-primary w-100">
-            Все новости <span class="badge bg-light text-primary">{{ news_count }}</span>
+        <a href="{% url 'news:catalog' %}" class="btn btn-primary btn-all-news w-100">
+            <i class="bi bi-grid me-2"></i>Все новости <span class="badge bg-light text-primary">{{ news_count }}</span>
         </a>
     </div>
 
