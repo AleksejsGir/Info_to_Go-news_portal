@@ -123,5 +123,58 @@
             </div>
         </div>
     </div>
+
+    <!-- Секция комментариев -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h4 class="mb-0"><i class="bi bi-chat-dots"></i> Комментарии ({{ comments.count }})</h4>
+        </div>
+        <div class="card-body">
+            {% if user.is_authenticated %}
+                <form method="post" class="mb-4">
+                    {% csrf_token %}
+                    <div class="form-group mb-3">
+                        <label for="{{ comment_form.content.id_for_label }}">{{ comment_form.content.label }}</label>
+                        {{ comment_form.content }}
+                        {% if comment_form.content.errors %}
+                            <div class="alert alert-danger mt-2">
+                                {{ comment_form.content.errors }}
+                            </div>
+                        {% endif %}
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-send"></i> Отправить комментарий
+                    </button>
+                </form>
+            {% else %}
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i> Чтобы оставить комментарий, пожалуйста,
+                    <a href="{% url 'users:login' %}?next={{ request.path }}" class="alert-link">войдите в систему</a>.
+                </div>
+            {% endif %}
+
+            <div class="comments-list mt-4">
+                {% if comments %}
+                    {% for comment in comments %}
+                        <div class="comment-item border-bottom pb-3 mb-3">
+                            <div class="d-flex align-items-center mb-2">
+                                <strong>{{ comment.user.username|default:"Аноним" }}</strong>
+                                <small class="text-muted ms-2">
+                                    <i class="bi bi-clock"></i> {{ comment.created_at|date:"d.m.Y H:i" }}
+                                </small>
+                            </div>
+                            <div class="comment-content">
+                                {{ comment.content|linebreaks }}
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center text-muted py-3">
+                        <i class="bi bi-chat-square"></i> Нет комментариев. Будьте первым, кто оставит комментарий!
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}

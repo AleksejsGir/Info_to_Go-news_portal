@@ -18,7 +18,7 @@ from .models import Article, Tag, Category, Like, Favorite
 from .forms import ArticleForm, ArticleUploadForm
 from django.contrib import messages
 from django.contrib.auth import get_user_model
-
+from .forms import ArticleForm, ArticleUploadForm, CommentForm
 
 # Класс для получения данных о категориях
 class CategoryService:
@@ -357,7 +357,14 @@ class ArticleDetailView(BaseArticleDetailView):
         context = super().get_context_data(**kwargs)
         article = self.get_object()
 
-        # Добавляем в контекст информацию о лайке и избранном для текущего пользователя
+        # Добавляем комментарии в контекст
+        context['comments'] = article.comments.all()
+
+        # Добавляем форму комментария для авторизованных пользователей
+        if self.request.user.is_authenticated:
+            context['comment_form'] = CommentForm()
+
+        # Добавляем информацию о лайке и избранном для текущего пользователя
         if self.request.user.is_authenticated:
             context['is_liked'] = article.is_liked_by_user(self.request.user)
             context['is_favorite'] = article.is_favorite_for_user(self.request.user)
@@ -366,6 +373,40 @@ class ArticleDetailView(BaseArticleDetailView):
             context['is_favorite'] = False
 
         return context
+
+    def post(self, request, *args, **kwargs):
+        # Проверяем, авторизован ли пользователь
+        if not request.user.is_authenticated:
+            messages.error(request, 'Для добавления комментария необходимо авторизоваться')
+            return redirect('users:login')
+
+        # Получаем статью
+        article = self.get_object()
+
+        # Создаем экземпляр формы с данными из запроса
+        form = CommentForm(request.POST)
+
+        if form.is_valid():
+            # Создаем комментарий, но не сохраняем его пока
+            comment = form.save(commit=False)
+            comment.article = article
+            comment.user = request.user
+            comment.save()
+
+            # Записываем действие в историю активности
+            record_user_activity(
+                user=request.user,
+                action_type='add_comment',
+                description=f'Добавлен комментарий к статье "{article.title}"',
+                related_object_id=article.id
+            )
+
+            messages.success(request, 'Комментарий успешно добавлен')
+        else:
+            messages.error(request, 'Ошибка при добавлении комментария')
+
+        # Перенаправляем обратно на страницу статьи
+        return redirect('news:detail_article_by_id', article_id=article.id)
 
 
 # 10. Переписать add_article на CreateView

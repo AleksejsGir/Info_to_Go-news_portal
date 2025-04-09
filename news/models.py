@@ -285,3 +285,32 @@ class Favorite(models.Model):
 
     def __str__(self):
         return f"Избранная статья {self.article.title} пользователя {self.user.username}"
+
+
+class Comment(models.Model):
+    article = models.ForeignKey(
+        Article,
+        on_delete=models.CASCADE,
+        related_name='comments',
+        verbose_name='Статья'
+    )
+    user = models.ForeignKey(
+        get_user_model(),
+        on_delete=models.CASCADE,
+        related_name='user_comments',
+        null=True,
+        blank=True,
+        verbose_name='Пользователь'
+    )
+    content = models.TextField(verbose_name='Комментарий')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Создан')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлен')
+
+    class Meta:
+        db_table = 'Comments'
+        verbose_name = 'Комментарий'
+        verbose_name_plural = 'Комментарии'
+        ordering = ['-created_at']  # Новые комментарии сверху
+
+    def __str__(self):
+        return f"Комментарий от {self.user.username if self.user else 'Анонима'} к статье '{self.article.title}'"

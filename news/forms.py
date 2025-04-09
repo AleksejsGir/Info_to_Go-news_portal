@@ -1,6 +1,6 @@
 # news/forms.py
 from django import forms
-from .models import Article, Category, Tag
+from .models import Article, Category, Tag, Comment
 import json
 from django.core.exceptions import ValidationError
 
@@ -180,3 +180,31 @@ class ArticleUploadForm(forms.Form):
                             results['new_tags'].add(tag)
 
         return results
+
+
+class CommentForm(forms.ModelForm):
+    """
+    Форма для добавления комментариев к статьям
+    """
+    class Meta:
+        model = Comment
+        fields = ['content']
+        widgets = {
+            'content': forms.Textarea(attrs={
+                'class': 'form-control',
+                'placeholder': 'Напишите комментарий...',
+                'rows': 3
+            }),
+        }
+        labels = {
+            'content': 'Ваш комментарий'
+        }
+
+    def clean_content(self):
+        """
+        Проверка содержимого комментария
+        """
+        content = self.cleaned_data['content']
+        if len(content) < 2:
+            raise forms.ValidationError("Комментарий должен содержать не менее 2 символов")
+        return content
