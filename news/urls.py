@@ -17,6 +17,7 @@ urlpatterns = [
     path('toggle_like/<int:article_id>/', views.ToggleLikeView.as_view(), name='toggle_like'),
     path('toggle_favorite/<int:article_id>/', views.ToggleFavoriteView.as_view(), name='toggle_favorite'),
     path('favorites/', views.FavoriteNewsListView.as_view(), name='favorite_news'),
+    path('comment/like/<int:comment_id>/', views.CommentLikeView.as_view(), name='comment_like'),
 
     # Маршрут для добавления статьи
     path('add/', views.ArticleCreateView.as_view(), name='add_article'),

@@ -302,9 +302,65 @@ class Comment(models.Model):
         blank=True,
         verbose_name='Пользователь'
     )
+    parent = models.ForeignKey(
+        'self',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='replies',
+        verbose_name='Родительский комментарий'
+    )
     content = models.TextField(verbose_name='Комментарий')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Создан')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлен')
+
+    # Методы для работы с лайками комментариев
+    def toggle_like(self, user, is_like=True):
+        """Переключает состояние лайка/дизлайка для данного пользователя"""
+        if not user or not user.is_authenticated:
+            return False, self.get_likes_count(), self.get_dislikes_count()
+
+        # Проверяем, есть ли уже лайк/дизлайк от этого пользователя
+        existing = CommentLike.objects.filter(comment=self, user=user).first()
+
+        if existing:
+            # Если уже стоит такая же оценка - удаляем её (снимаем)
+            if existing.is_like == is_like:
+                existing.delete()
+                return False, self.get_likes_count(), self.get_dislikes_count()
+            else:
+                # Если стоит противоположная - меняем её
+                existing.is_like = is_like
+                existing.save()
+                return True, self.get_likes_count(), self.get_dislikes_count()
+        else:
+            # Если оценки нет - создаём новую
+            CommentLike.objects.create(comment=self, user=user, is_like=is_like)
+            return True, self.get_likes_count(), self.get_dislikes_count()
+
+    def get_likes_count(self):
+        """Возвращает количество лайков комментария"""
+        return self.comment_likes.filter(is_like=True).count()
+
+    def get_dislikes_count(self):
+        """Возвращает количество дизлайков комментария"""
+        return self.comment_likes.filter(is_like=False).count()
+
+    def is_liked_by_user(self, user):
+        """Проверяет, лайкнут ли комментарий пользователем"""
+        if not user or not user.is_authenticated:
+            return False
+        return CommentLike.objects.filter(
+            comment=self, user=user, is_like=True
+        ).exists()
+
+    def is_disliked_by_user(self, user):
+        """Проверяет, дизлайкнут ли комментарий пользователем"""
+        if not user or not user.is_authenticated:
+            return False
+        return CommentLike.objects.filter(
+            comment=self, user=user, is_like=False
+        ).exists()
 
     class Meta:
         db_table = 'Comments'
@@ -314,3 +370,37 @@ class Comment(models.Model):
 
     def __str__(self):
         return f"Комментарий от {self.user.username if self.user else 'Анонима'} к статье '{self.article.title}'"
+
+
+class CommentLike(models.Model):
+    """
+    Модель для хранения лайков/дизлайков к комментариям.
+    """
+    comment = models.ForeignKey(
+        Comment,
+        on_delete=models.CASCADE,
+        related_name='comment_likes',
+        verbose_name='Комментарий'
+    )
+    user = models.ForeignKey(
+        get_user_model(),
+        on_delete=models.CASCADE,
+        related_name='user_comment_likes',
+        verbose_name='Пользователь'
+    )
+    is_like = models.BooleanField(
+        default=True,
+        verbose_name='Лайк/Дизлайк',
+        help_text='True для лайка, False для дизлайка'
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Время оценки')
+
+    class Meta:
+        db_table = 'CommentLikes'
+        verbose_name = 'Оценка комментария'
+        verbose_name_plural = 'Оценки комментариев'
+        unique_together = ('comment', 'user')  # Пользователь может только один раз оценить комментарий
+
+    def __str__(self):
+        action = "лайкнул" if self.is_like else "дизлайкнул"
+        return f"{self.user.username} {action} комментарий {self.comment.id}"

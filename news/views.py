@@ -1,6 +1,6 @@
 # news/views.py
 from users.utils import record_user_activity
-from django.contrib.auth.mixins import LoginRequiredMixin # это встроенный миксин в Django!!!!
+from django.contrib.auth.mixins import LoginRequiredMixin  # это встроенный миксин в Django!!!!
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.db.models import Count, Q
@@ -14,11 +14,11 @@ from django.views.generic import (
 )
 from django.urls import reverse_lazy
 
-from .models import Article, Tag, Category, Like, Favorite
-from .forms import ArticleForm, ArticleUploadForm
+from .models import Article, Tag, Category, Like, Favorite, Comment, CommentLike
+from .forms import ArticleForm, ArticleUploadForm, CommentForm
 from django.contrib import messages
 from django.contrib.auth import get_user_model
-from .forms import ArticleForm, ArticleUploadForm, CommentForm
+
 
 # Класс для получения данных о категориях
 class CategoryService:
@@ -222,6 +222,62 @@ class ToggleLikeView(BaseToggleView):
     toggle_method = 'toggle_like'
 
 
+# Представление для обработки лайков/дизлайков к комментариям
+
+class CommentLikeView(LoginRequiredMixin, View):
+    """
+    Представление для обработки лайков/дизлайков к комментариям
+    """
+
+    # news/views.py - заменить метод post в классе CommentLikeView
+
+    def post(self, request, comment_id):
+        try:
+            print("-" * 50)
+            print(f"Получен запрос на лайк/дизлайк комментария ID: {comment_id}")
+            print(f"POST данные: {request.POST}")
+
+            # Получаем комментарий
+            comment = get_object_or_404(Comment, id=comment_id)
+            print(f"Комментарий найден: {comment}")
+
+            # Определяем тип действия
+            action_type = request.POST.get('action', 'like')
+            is_like = action_type == 'like'
+            print(f"Действие: {action_type}, это лайк: {is_like}")
+
+            # Выполняем действие
+            is_active, likes_count, dislikes_count = comment.toggle_like(request.user, is_like)
+            print(f"Результат: active={is_active}, likes={likes_count}, dislikes={dislikes_count}")
+
+            # Запись в историю активности
+            action_description = f'{"Поставлен" if is_active else "Убран"} {"лайк" if is_like else "дизлайк"} к комментарию {comment.id}'
+            record_user_activity(
+                user=request.user,
+                action_type='comment_like' if is_like else 'comment_dislike',
+                description=action_description,
+                related_object_id=comment.id
+            )
+
+            # Формируем ответ
+            response_data = {
+                'success': True,
+                'is_active': is_active,
+                'likes_count': likes_count,
+                'dislikes_count': dislikes_count
+            }
+
+            print(f"Отправляем ответ: {response_data}")
+            print("-" * 50)
+            return JsonResponse(response_data)
+
+        except Exception as e:
+            print(f"ОШИБКА при обработке лайка: {e}")
+            import traceback
+            traceback.print_exc()
+            return JsonResponse({'success': False, 'error': str(e)}, status=400)
+
+
 # 6. Переписать upload_json_view на FormView
 class UploadJsonView(LoginRequiredMixin, FormView):
     template_name = 'news/upload_json.html'
@@ -357,22 +413,30 @@ class ArticleDetailView(BaseArticleDetailView):
         context = super().get_context_data(**kwargs)
         article = self.get_object()
 
-        # Добавляем комментарии в контекст
-        context['comments'] = article.comments.all()
+        # Добавляем форму комментариев в контекст
+        context['comment_form'] = CommentForm()
 
-        # Добавляем форму комментария для авторизованных пользователей
+        # Получаем комментарии верхнего уровня (без родителя)
+        comments = article.comments.filter(parent=None).order_by('-created_at')
+
+        # Добавляем информацию о лайках/дизлайках для каждого комментария
         if self.request.user.is_authenticated:
-            context['comment_form'] = CommentForm()
+            for comment in comments:
+                comment.user_liked = comment.is_liked_by_user(self.request.user)
+                comment.user_disliked = comment.is_disliked_by_user(self.request.user)
 
-        # Добавляем информацию о лайке и избранном для текущего пользователя
-        if self.request.user.is_authenticated:
-            context['is_liked'] = article.is_liked_by_user(self.request.user)
-            context['is_favorite'] = article.is_favorite_for_user(self.request.user)
-        else:
-            context['is_liked'] = False
-            context['is_favorite'] = False
+                # Обрабатываем вложенные комментарии
+                self._process_comment_replies(comment)
 
+        context['comments'] = comments
         return context
+
+    def _process_comment_replies(self, comment):
+        """Рекурсивно обрабатывает вложенные комментарии"""
+        for reply in comment.replies.all():
+            reply.user_liked = reply.is_liked_by_user(self.request.user)
+            reply.user_disliked = reply.is_disliked_by_user(self.request.user)
+            self._process_comment_replies(reply)
 
     def post(self, request, *args, **kwargs):
         # Проверяем, авторизован ли пользователь
@@ -391,13 +455,23 @@ class ArticleDetailView(BaseArticleDetailView):
             comment = form.save(commit=False)
             comment.article = article
             comment.user = request.user
+
+            # Если указан родительский комментарий - устанавливаем его
+            parent_id = form.cleaned_data.get('parent_id')
+            if parent_id:
+                parent_comment = get_object_or_404(Comment, id=parent_id, article=article)
+                comment.parent = parent_comment
+
             comment.save()
 
             # Записываем действие в историю активности
+            action_type = 'reply_comment' if parent_id else 'add_comment'
+            action_desc = f'Добавлен ответ на комментарий {parent_id}' if parent_id else f'Добавлен комментарий к статье "{article.title}"'
+
             record_user_activity(
                 user=request.user,
-                action_type='add_comment',
-                description=f'Добавлен комментарий к статье "{article.title}"',
+                action_type=action_type,
+                description=action_desc,
                 related_object_id=article.id
             )
 
@@ -703,7 +777,8 @@ class SaveArticlesFromJsonView(LoginRequiredMixin, View):
         for article_data in json_articles:
             try:
                 # Пропускаем статьи с отсутствующими обязательными полями или дубликатами
-                if not article_data.get('title') or not article_data.get('content') or article_data['title'] in existing_titles:
+                if not article_data.get('title') or not article_data.get('content') or article_data[
+                    'title'] in existing_titles:
                     continue
 
                 # Создаем новую статью
