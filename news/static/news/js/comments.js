@@ -1,6 +1,4 @@
-// Создайте директорию static/news/js/ если её нет
-// Создайте файл static/news/js/comments.js с следующим содержимым:
-
+// static/news/js/comments.js
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Система комментариев инициализирована');
 
@@ -57,7 +55,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // 2. Обработка лайков и дизлайков комментариев
-    const likeButtons = document.querySelectorAll('.comment-like-btn, .comment-dislike-btn');
+    const likeButtons = document.querySelectorAll('.reaction-btn');
     console.log(`Найдено ${likeButtons.length} кнопок лайк/дизлайк`);
 
     likeButtons.forEach(button => {
@@ -74,6 +72,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.log('Запрос уже обрабатывается');
                 return;
             }
+
+            // Добавляем анимацию пульсации
+            this.classList.add('pulse');
+            setTimeout(() => this.classList.remove('pulse'), 500);
 
             this.classList.add('processing');
 
@@ -122,8 +124,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (dislikesCount) dislikesCount.textContent = data.dislikes_count;
 
                     // Обновляем состояние кнопок
-                    const likeBtn = commentItem.querySelector('.comment-like-btn');
-                    const dislikeBtn = commentItem.querySelector('.comment-dislike-btn');
+                    const likeBtn = commentItem.querySelector('.like-btn');
+                    const dislikeBtn = commentItem.querySelector('.dislike-btn');
 
                     if (action === 'like') {
                         if (likeBtn) likeBtn.classList.toggle('active', data.is_active);

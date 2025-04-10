@@ -26,14 +26,14 @@
 
             <div class="d-flex align-items-center">
                 {% if user.is_authenticated %}
-                <div class="btn-group btn-group-sm me-2">
-                    <button class="btn btn-outline-success comment-like-btn {% if comment.user_liked %}active{% endif %}"
+                <div class="reaction-buttons me-2">
+                    <button class="reaction-btn like-btn {% if comment.user_liked %}active{% endif %}"
                             data-comment-id="{{ comment.id }}"
                             data-action="like">
                         <i class="bi bi-hand-thumbs-up-fill"></i>
                         <span class="comment-likes-count">{{ comment.get_likes_count }}</span>
                     </button>
-                    <button class="btn btn-outline-danger comment-dislike-btn {% if comment.user_disliked %}active{% endif %}"
+                    <button class="reaction-btn dislike-btn {% if comment.user_disliked %}active{% endif %}"
                             data-comment-id="{{ comment.id }}"
                             data-action="dislike">
                         <i class="bi bi-hand-thumbs-down-fill"></i>
@@ -41,11 +41,11 @@
                     </button>
                 </div>
                 {% else %}
-                <div class="me-3">
-                    <span class="text-success">
+                <div class="reaction-indicators">
+                    <span class="reaction-count like-count">
                         <i class="bi bi-hand-thumbs-up-fill"></i> {{ comment.get_likes_count }}
                     </span>
-                    <span class="text-danger ms-2">
+                    <span class="reaction-count dislike-count">
                         <i class="bi bi-hand-thumbs-down-fill"></i> {{ comment.get_dislikes_count }}
                     </span>
                 </div>

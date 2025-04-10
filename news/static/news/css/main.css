@@ -1663,3 +1663,94 @@ opacity: 0;
         height: 60px;
     }
 }
+/* Стили современных кнопок реакций */
+.reaction-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.reaction-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 5px 12px;
+    border-radius: 20px;
+    border: none;
+    background: #f8f9fa;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.like-btn {
+    color: #198754;
+}
+
+.like-btn:hover, .like-btn.active {
+    background-color: rgba(25, 135, 84, 0.1);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.like-btn.active {
+    background-color: rgba(25, 135, 84, 0.2);
+    font-weight: bold;
+}
+
+.dislike-btn {
+    color: #dc3545;
+}
+
+.dislike-btn:hover, .dislike-btn.active {
+    background-color: rgba(220, 53, 69, 0.1);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.dislike-btn.active {
+    background-color: rgba(220, 53, 69, 0.2);
+    font-weight: bold;
+}
+
+.reaction-btn i {
+    margin-right: 5px;
+}
+
+/* Анимация пульсации */
+.pulse {
+    animation: pulse-animation 0.5s;
+}
+
+@keyframes pulse-animation {
+    0% {
+        box-shadow: 0 0 0 0 rgba(0, 0, 0, 0.2);
+    }
+    100% {
+        box-shadow: 0 0 0 12px rgba(0, 0, 0, 0);
+    }
+}
+
+/* Стили для неавторизованных пользователей */
+.reaction-indicators {
+    display: flex;
+    gap: 12px;
+}
+
+.reaction-count {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    border-radius: 16px;
+    font-size: 0.85rem;
+}
+
+.like-count {
+    color: #198754;
+    background: rgba(25, 135, 84, 0.1);
+}
+
+.dislike-count {
+    color: #dc3545;
+    background: rgba(220, 53, 69, 0.1);
+}

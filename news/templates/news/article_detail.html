@@ -167,6 +167,11 @@
     </div>
     {% endblock %}
 
-{% block extra_js %}
+{% block extra_css %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'news/css/main.css' %}">
+{% endblock %}
+    {% block extra_js %}
+{{ block.super }}
 <script src="{% static 'news/js/comments.js' %}"></script>
 {% endblock %}
