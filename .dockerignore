@@ -1,9 +1,8 @@
+# Содержимое из вашего пункта 1
 .git
 .gitignore
-.env
+.env # Исключаем файл с секретами
 .dockerignore
-Dockerfile
-docker-compose.yml
 __pycache__/
 *.py[cod]
 *$py.class
@@ -12,3 +11,8 @@ env/
 venv/
 ENV/
 *.sqlite3
+nginx/ # Исключаем, т.к. копируется в контейнер
+postgresql/ # Исключаем, т.к. копируется в контейнер
+staticfiles/ # Генерируется collectstatic
+# media/ # Не исключаем, т.к. copy_media.sh берет ее локально
+# fixtures/ # Раскомментируйте, если НЕ хотите копировать фикстуры в образ

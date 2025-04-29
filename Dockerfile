@@ -1,35 +1,49 @@
-# Dockerfile
 
-# Используем официальный образ Python
+# Добавлен gettext для компиляции переводов (если используется)
+# Уточнен пользователь и группа
+
 FROM python:3.11-slim
 
-# Установка рабочей директории
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    # Добавим переменные для базы данных по умолчанию
+    PG_HOST=db \
+    PG_PORT=5432 \
+    # Добавим переменную для настроек Django
+    DJANGO_SETTINGS_MODULE=itg.settings
+
 WORKDIR /app
 
-# Установка системных зависимостей
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     postgresql-client \
     netcat-traditional \
+    gettext \
     && rm -rf /var/lib/apt/lists/*
 
-# Установка зависимостей Python
 COPY requirements.txt .
+# Рекомендуется использовать --no-cache-dir
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Копирование проекта
+# Копирование проекта ПОСЛЕ установки зависимостей
 COPY . .
 
 # Создание директорий для статических и медиа файлов
+# Права лучше назначать после копирования и перед сменой пользователя
 RUN mkdir -p /app/staticfiles /app/media
 
-# Настройка Python
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
-
-# Открываем порт для Gunicorn
-EXPOSE 8000
-
-# Запуск через entrypoint.sh
+# Копирование entrypoint.sh и установка прав
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
+
+# Создаем пользователя и группу appuser:app
+RUN addgroup --system app && adduser --system --ingroup app --no-create-home appuser
+
+# Назначаем права на все приложение и папки static/media
+RUN chown -R appuser:app /app
+
+# Переключаемся на пользователя
+USER appuser
+
+EXPOSE 8000
+
 ENTRYPOINT ["/entrypoint.sh"]
