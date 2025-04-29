@@ -1,9 +1,40 @@
-venv
-.venv
-.idea
-.vscode
+# Исключаем виртуальные окружения
+venv/
+.venv/
+env/
+ENV/
+
+# Исключаем папки IDE/редакторов
+.idea/
+.vscode/
+
+# Исключаем файлы баз данных
 *.sqlite3
 *.db
-__pycache__
-media
+
+# Исключаем кеш и скомпилированные файлы Python
+__pycache__/
+*.py[cod]
+*.py.class
+
+# Исключаем сгенерированные папки Django
+staticfiles/
+media/
+
+# Исключаем файлы логов
+*.log
+
+# Исключаем файл окружения (СЕКРЕТЫ!)
 .env
+
+# Исключаем сгенерированный дамп БД
+postgresql/init-scripts/init.sql
+
+# Исключаем системные файлы OS
+.DS_Store
+Thumbs.db
+
+# Другие возможные исключения (если используете)
+# htmlcov/
+# .coverage
+# *.bak

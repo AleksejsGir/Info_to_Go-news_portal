@@ -1,18 +1,51 @@
-# Содержимое из вашего пункта 1
+# Git
 .git
 .gitignore
-.env # Исключаем файл с секретами
+
+# Docker config
+Dockerfile
+docker-compose.yml
 .dockerignore
+nginx/ # <-- Не копируем в образ web через COPY . .
+postgresql/ # <-- Не копируем в образ web через COPY . .
+# Скрипты .sh копируются отдельно в Dockerfile, поэтому их тоже можно добавить сюда,
+# чтобы они не скопировались второй раз через COPY . .
+entrypoint.sh
+dump_db.sh
+copy_media.sh
+
+# Файл окружения (СЕКРЕТЫ!)
+.env
+
+# Виртуальные окружения
+venv/
+.venv/
+env/
+ENV/
+
+# Python cache/bytecode
 __pycache__/
 *.py[cod]
-*$py.class
-.Python
-env/
-venv/
-ENV/
+
+# Папки IDE
+.idea/
+.vscode/
+
+# Базы данных
 *.sqlite3
-nginx/ # Исключаем, т.к. копируется в контейнер
-postgresql/ # Исключаем, т.к. копируется в контейнер
-staticfiles/ # Генерируется collectstatic
-# media/ # Не исключаем, т.к. copy_media.sh берет ее локально
-# fixtures/ # Раскомментируйте, если НЕ хотите копировать фикстуры в образ
+*.db
+
+# Сгенерированные Django папки
+staticfiles/
+# media/ # Не копируем локальную медиа в образ
+
+# Логи
+*.log
+
+# Системные файлы OS
+.DS_Store
+Thumbs.db
+
+# Другое
+*.bak
+# fixtures/ # Раскомментируйте, если фикстуры копируются в Dockerfile отдельно
