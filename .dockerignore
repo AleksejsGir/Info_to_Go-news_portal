@@ -6,13 +6,8 @@
 Dockerfile
 docker-compose.yml
 .dockerignore
-nginx/ # <-- Не копируем в образ web через COPY . .
-postgresql/ # <-- Не копируем в образ web через COPY . .
-# Скрипты .sh копируются отдельно в Dockerfile, поэтому их тоже можно добавить сюда,
-# чтобы они не скопировались второй раз через COPY . .
-entrypoint.sh
-dump_db.sh
-copy_media.sh
+nginx/
+postgresql/
 
 # Файл окружения (СЕКРЕТЫ!)
 .env
@@ -48,4 +43,4 @@ Thumbs.db
 
 # Другое
 *.bak
-# fixtures/ # Раскомментируйте, если фикстуры копируются в Dockerfile отдельно
+# fixtures/
