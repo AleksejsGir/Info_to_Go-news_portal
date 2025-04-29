@@ -1,0 +1,59 @@
+# docker-compose.yml
+
+version: '3.8'
+
+services:
+  # Сервис Django с Gunicorn
+  web:
+    build: .
+    restart: always
+    volumes:
+      - .:/app
+      - static_volume:/app/staticfiles
+      - media_volume:/app/media
+    expose:
+      - 8000
+    depends_on:
+      - db
+    env_file:
+      - .env.docker
+    networks:
+      - app-network
+
+  # Сервис PostgreSQL
+  db:
+    image: postgres:13
+    restart: always
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    env_file:
+      - .env.docker
+    environment:
+      - POSTGRES_PASSWORD=${PG_PASSWORD}
+      - POSTGRES_USER=${PG_USER}
+      - POSTGRES_DB=${PG_NAME}
+    networks:
+      - app-network
+
+  # Сервис Nginx для раздачи статики
+  nginx:
+    image: nginx:1.21
+    restart: always
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+      - static_volume:/app/staticfiles
+      - media_volume:/app/media
+    ports:
+      - "80:80"
+    depends_on:
+      - web
+    networks:
+      - app-network
+
+networks:
+  app-network:
+
+volumes:
+  postgres_data:
+  static_volume:
+  media_volume:
