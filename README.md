@@ -244,7 +244,7 @@ This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENS
         <br />
         <a href="https://github.com/AleksejsGir">GitHub</a> •
         <a href="mailto:aleksej.it.gir@gmail.com">Email</a> •
-        <a href="www.linkedin.com/in/aleksejs-giruckis-0569a7353">LinkedIn</a>
+        <a href="https://linkedin.com/in/aleksejs-giruckis-0569a7353">LinkedIn</a>
       </td>
     </tr>
   </table>
