@@ -94,3 +94,23 @@
 
 ```bash
 docker exec -it itg_django_web python manage.py <ваша_команда>
+```
+## 👨‍💻 Автор разработки
+<table>
+  <tr>
+    <td align="center">
+      <a href="https://github.com/AleksejsGir">
+        <img src="https://github.com/AleksejsGir.png" width="100px;" alt="Aleksejs Giruckis"/>
+        <br />
+        <sub><b>Aleksejs Giruckis</b></sub>
+      </a>
+      <br />
+      <sub>Full-Stack Developer</sub>
+    </td>
+  </tr>
+</table>
+
+## 📄 License
+
+This project is licensed under the [Apache License 2.0](LICENSE).
+See the [NOTICE](NOTICE) file for attribution.
