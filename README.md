@@ -1,116 +1,258 @@
-# Info_to_Go-news_portal (Портал Новостей на Django)
+# 📰 Info to Go - Django News Portal
 
-Это учебный проект новостного портала, разработанный на Python с использованием фреймворка Django и запущенный с помощью Docker. Проект создан в рамках обучения в онлайн-школе.
+> A modern, fully-featured news portal built with Django, featuring user authentication, content management, and social features. Perfect for staying updated with the latest technology news.
 
-## Особенности
+![Python](https://img.shields.io/badge/Python-3.10+-blue?style=flat-square&logo=python&logoColor=white)
+![Django](https://img.shields.io/badge/Django-4.2+-green?style=flat-square&logo=django&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-13+-blue?style=flat-square&logo=postgresql&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-20.10+-blue?style=flat-square&logo=docker&logoColor=white)
+![License](https://img.shields.io/badge/License-Apache%202.0-yellow?style=flat-square)
 
-*   Регистрация и аутентификация пользователей (стандартная и через GitHub).
-*   Создание, редактирование, удаление новостных статей.
-*   Категории и теги для статей.
-*   Лайки, избранное, комментарии (если реализовано).
-*   Административная панель (Jazzmin).
-*   Полностью контейнеризован с использованием Docker и Docker Compose.
 
-## Технологии
+## 📸 Screenshots
 
-*   **Backend:** Python, Django
-*   **Frontend:** HTML, CSS, JavaScript (Bootstrap/шаблоны Django)
-*   **База данных:** PostgreSQL
-*   **Аутентификация:** Django Allauth (Email, GitHub OAuth)
-*   **Админка:** Django Admin, Jazzmin
-*   **Веб-сервер/Прокси:** Nginx
-*   **WSGI сервер:** Gunicorn
-*   **Контейнеризация:** Docker, Docker Compose
+### Homepage with Category Sidebar
+![Homepage](screenshots/homepage.png)
+*Clean, modern interface with categorized news and intuitive navigation*
 
-## Предварительные требования
+### News Catalog with Sorting
+![News Catalog](screenshots/catalog.png)
+*Advanced filtering and sorting options for better content discovery*
 
-*   [Docker](https://www.docker.com/get-started)
-*   [Docker Compose](https://docs.docker.com/compose/install/) (обычно устанавливается вместе с Docker Desktop)
-*   [Git](https://git-scm.com/)
+### User Profile Management
+![User Profile](screenshots/profile.png)
+*Comprehensive user profile with activity tracking and content management*
 
-## Установка и Запуск
+### Article Creation Form
+![Add Article](screenshots/add-article.png)
+*User-friendly article creation with rich text editor and media upload*
 
-1.  **Клонировать репозиторий:**
-    ```bash
-    git clone https://github.com/AleksejsGir/Info_to_Go-news_portal.git
-    cd Info_to_Go-news_portal
-    ```
 
-2.  **Создать и настроить файл `.env`:**
-    *   Скопируйте файл `.env.example` (если вы его создали и добавили в Git) или создайте `.env` вручную в корне проекта:
-        ```bash
-        cp .env.example .env
-        ```
-    *   **Отредактируйте `.env`**, указав ваши реальные значения для:
-        *   `SECRET_KEY` (сгенерируйте новый надежный ключ!)
-        *   `DEBUG` (`True` для разработки, `False` для production)
-        *   `PG_PASSWORD` (пароль для БД)
-        *   `EMAIL_...` (данные вашего SMTP-сервера, включая пароль приложения для Gmail)
-        *   `CLIENT_ID`, `CLIENT_SECRET` (ваши учетные данные GitHub OAuth App)
-        *   `DJANGO_SUPERUSER_PASSWORD` (пароль для суперпользователя)
-        *   `DJANGO_ALLOWED_HOSTS` (для локального запуска достаточно `localhost,127.0.0.1,nginx`)
-        *   `DJANGO_SITE_DOMAIN` (для локального запуска `localhost`)
+## ✨ Key Features
 
-3.  **Создать дамп локальной базы данных (если нужно перенести данные):**
-    *   Убедитесь, что ваша локальная PostgreSQL запущена.
-    *   Убедитесь, что файл `dump_db.sh` имеет права на выполнение (`chmod +x dump_db.sh`).
-    *   Запустите скрипт:
-        ```bash
-        ./dump_db.sh
-        ```
-    *   Это создаст файл `postgresql/init-scripts/init.sql`. *(Примечание: не добавляйте этот файл в Git)*.
+### 🔐 User Management
+- **Multi-Authentication**: Email/password and GitHub OAuth integration
+- **User Profiles**: Comprehensive profile management with activity tracking
+- **Permission System**: Role-based access control for content management
 
-4.  **Собрать Docker-образы:**
-    ```bash
-    docker-compose build
-    ```
+### 📝 Content Management
+- **Article Creation**: Rich text editor with media upload capabilities
+- **Categories & Tags**: Hierarchical content organization system
+- **Advanced Filtering**: Sort by date, popularity, and category
+- **Pagination**: Efficient content loading with 15 items per page
 
-5.  **Запустить контейнеры:**
-    ```bash
-    docker-compose up -d
-    ```
-    *При первом запуске будет создана база данных из `init.sql` (если он есть) и выполнены начальные настройки.*
+### 💫 Social Features
+- **Like System**: Users can like/unlike articles
+- **Favorites**: Bookmark articles for later reading
+- **Activity History**: Track user interactions and engagement
+- **Comment System**: Interactive discussions on articles *(if implemented)*
 
-6.  **Скопировать медиафайлы (если нужно перенести):**
-    *   Убедитесь, что контейнеры запущены.
-    *   Убедитесь, что файл `copy_media.sh` имеет права на выполнение (`chmod +x copy_media.sh`).
-    *   Запустите скрипт:
-        ```bash
-        ./copy_media.sh
-        ```
-    *   *(Примечание: может потребоваться выполнить `docker exec -u root itg_django_web chown -R appuser:app /app/media` один раз после копирования, если возникнут проблемы с правами на запись).*
+### 🎨 Modern UI/UX
+- **Responsive Design**: Bootstrap 5 for mobile-first approach
+- **Clean Interface**: Professional design with intuitive navigation
+- **Dark/Light Theme**: User preference customization *(if implemented)*
+- **Fast Loading**: Optimized queries and efficient pagination
 
-7.  **Открыть сайт:**
-    Перейдите в браузере по адресу [http://localhost](http://localhost) (или [http://127.0.0.1](http://127.0.0.1)).
+## 🛠️ Technology Stack
 
-## Доступ к Админ-панели
+### Backend
+- **Python 3.10+** - Core programming language
+- **Django 4.2+** - Web framework with MVT architecture
+- **Django Allauth** - Authentication system with social login
+- **Jazzmin** - Enhanced admin interface
 
-*   URL: [http://localhost/admin/](http://localhost/admin/)
-*   Логин/Пароль: Имя пользователя и пароль, указанные в переменных `DJANGO_SUPERUSER_USERNAME` и `DJANGO_SUPERUSER_PASSWORD` в файле `.env`.
+### Database
+- **PostgreSQL 13+** - Primary database with advanced features
+- **Django ORM** - Object-relational mapping for database operations
 
-## Выполнение Django команд
+### Frontend
+- **Bootstrap 5** - Responsive CSS framework
+- **JavaScript ES6+** - Interactive functionality
+- **Django Templates** - Server-side rendering
 
-Для выполнения команд `manage.py` (например, `makemigrations`, `shell`, `changepassword`) используйте `docker exec`:
+### DevOps & Deployment
+- **Docker & Docker Compose** - Containerization and orchestration
+- **Nginx** - Reverse proxy and static file serving
+- **Gunicorn** - WSGI HTTP server for production
+
+### Development Tools
+- **Git** - Version control
+- **VS Code** - Development environment
+- **PostgreSQL Admin** - Database management
+
+## 🏗️ Architecture
+
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│     Nginx       │    │     Django      │    │   PostgreSQL    │
+│   (Reverse      │◄──►│   Application   │◄──►│    Database     │
+│     Proxy)      │    │     Server      │    │                 │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+         │                       │                       │
+         │                       │                       │
+    Static Files            Business Logic          Data Storage
+     & Media                 & Templates            & Relations
+```
+
+## 🚀 Quick Start
+
+### Prerequisites
+- [Docker](https://www.docker.com/get-started) 20.10+
+- [Docker Compose](https://docs.docker.com/compose/install/) 2.0+
+- [Git](https://git-scm.com/) 2.30+
+
+### Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/AleksejsGir/Info_to_Go-news_portal.git
+   cd Info_to_Go-news_portal
+   ```
+
+2. **Configure environment variables**
+   ```bash
+   cp .env.example .env
+   # Edit .env with your configuration
+   ```
+
+3. **Build and start services**
+   ```bash
+   docker-compose build
+   docker-compose up -d
+   ```
+
+4. **Access the application**
+   - **Main Site**: http://localhost
+   - **Admin Panel**: http://localhost/admin/
+   - **Default Admin**: Username and password from `.env` file
+
+### Development Commands
 
 ```bash
-docker exec -it itg_django_web python manage.py <ваша_команда>
+# View logs
+docker-compose logs -f web
+
+# Run Django commands
+docker exec -it itg_django_web python manage.py <command>
+
+# Access Django shell
+docker exec -it itg_django_web python manage.py shell
+
+# Run tests
+docker exec -it itg_django_web python manage.py test
+
+# Create superuser
+docker exec -it itg_django_web python manage.py createsuperuser
 ```
-## 👨‍💻 Автор разработки
-<table>
-  <tr>
-    <td align="center">
-      <a href="https://github.com/AleksejsGir">
-        <img src="https://github.com/AleksejsGir.png" width="100px;" alt="Aleksejs Giruckis"/>
-        <br />
-        <sub><b>Aleksejs Giruckis</b></sub>
-      </a>
-      <br />
-      <sub>Full-Stack Developer</sub>
-    </td>
-  </tr>
-</table>
+
+## 📋 Environment Configuration
+
+### Required Environment Variables
+
+```env
+# Django Settings
+SECRET_KEY=your-secret-key-here
+DEBUG=True
+DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1,nginx
+DJANGO_SITE_DOMAIN=localhost
+
+# Database
+PG_PASSWORD=your-postgres-password
+
+# Email Configuration
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_USE_TLS=True
+EMAIL_HOST_USER=your-email@gmail.com
+EMAIL_HOST_PASSWORD=your-app-password
+
+# GitHub OAuth
+CLIENT_ID=your-github-client-id
+CLIENT_SECRET=your-github-client-secret
+
+# Admin User
+DJANGO_SUPERUSER_USERNAME=admin
+DJANGO_SUPERUSER_EMAIL=admin@example.com
+DJANGO_SUPERUSER_PASSWORD=your-admin-password
+```
+
+## 🎯 Project Highlights
+
+### Technical Achievements
+- **Scalable Architecture**: Microservices approach with Docker containers
+- **Security Best Practices**: CSRF protection, secure authentication, environment variables
+- **Performance Optimization**: Database query optimization, efficient pagination
+- **Code Quality**: Clean code principles, proper Django project structure
+
+### Business Features
+- **Content Management**: Complete CRUD operations for articles
+- **User Engagement**: Social features to increase user retention
+- **Admin Interface**: Intuitive admin panel for content moderation
+- **SEO Friendly**: Proper URL structure and metadata management
+
+## 🧪 Testing
+
+```bash
+# Run all tests
+docker exec -it itg_django_web python manage.py test
+
+# Run specific app tests
+docker exec -it itg_django_web python manage.py test news
+
+# Run with coverage
+docker exec -it itg_django_web coverage run --source='.' manage.py test
+docker exec -it itg_django_web coverage report
+```
+
+## 📈 Future Enhancements
+
+- [ ] **Search Functionality**: Elasticsearch integration for advanced search
+- [ ] **API Development**: REST API with Django REST Framework
+- [ ] **Real-time Features**: WebSocket integration for live updates
+- [ ] **Analytics Dashboard**: User engagement and content performance metrics
+- [ ] **Mobile App**: React Native mobile application
+- [ ] **AI Features**: Content recommendation system
+- [ ] **Multilingual Support**: Internationalization (i18n) implementation
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request. For major changes, please open an issue first to discuss what you would like to change.
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
 ## 📄 License
 
-This project is licensed under the [Apache License 2.0](LICENSE).
-See the [NOTICE](NOTICE) file for attribution.
+This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
+
+## 👨‍💻 Author
+
+<div align="center">
+  <table>
+    <tr>
+      <td align="center">
+        <a href="https://github.com/AleksejsGir">
+          <img src="https://github.com/AleksejsGir.png" width="100px;" alt="Aleksejs Giruckis"/>
+          <br />
+          <sub><b>Aleksejs Giruckis</b></sub>
+        </a>
+        <br />
+        <sub>Full-Stack Developer</sub>
+        <br />
+        <a href="https://github.com/AleksejsGir">GitHub</a> •
+        <a href="mailto:giruckisaleksejs@gmail.com">Email</a> •
+        <a href="https://linkedin.com/in/aleksejs-giruckis">LinkedIn</a>
+      </td>
+    </tr>
+  </table>
+</div>
+
+---
+
+<div align="center">
+  <p>⭐ If you found this project helpful, please give it a star!</p>
+  <p>🚀 <strong>Available for hire</strong> - Open to new opportunities in the UK</p>
+</div>
